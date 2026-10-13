@@ -3047,7 +3047,7 @@
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-code text-blue-400 text-xl"></i>
                     <div>
-                        <h3 class="text-lg font-bold leading-tight">Código Google Apps Script v4.5 (Backend Seguro)</h3>
+                        <h3 class="text-lg font-bold leading-tight">Código Google Apps Script v4.6 (Backend Seguro)</h3>
                         <p class="text-[10px] text-gray-400">Depois de colar: execute <b>setupCompleto</b> uma vez e publique em Implantar &gt; Gerenciar implantações &gt; Editar &gt; <b>Nova versão</b> (mantém o mesmo link).</p>
                     </div>
                 </div>
@@ -3061,7 +3061,7 @@
  * =========================================================================================
  * GABPRO - SISTEMA DE GESTÃO DE PROCESSOS JURÍDICOS (ENTERPRISE BACKEND)
  * =========================================================================================
- * Versão: 4.5.0 (Metas de prazo e data de conclusão)
+ * Versão: 4.6.0 (Conexão mais rápida e estável)
  * Descrição: API RESTful Serverless baseada em Google Apps Script.
  *
  * Funcionalidades mantidas da v3.5:
@@ -3115,6 +3115,14 @@
  *   - Metas de cumprimento de prazo (SLA) por prioridade, compartilhadas por toda a equipe.
  *   - O sistema não envia e-mails (nenhuma permissão de e-mail é pedida).
  *
+ * Novidades da v4.6 (velocidade e estabilidade):
+ *   - Alterações chegam aos outros computadores sem baixar a base inteira: a consulta "version"
+ *     já devolve só o que mudou desde a última versão de cada computador (registro em cache).
+ *   - A reconstrução do Painel da planilha não trava mais as gravações (usa outra trava).
+ *   - Sessões de login consultadas no cache (respostas mais rápidas a cada consulta).
+ *   - Leitura completa protegida contra "corrida": vários computadores pedindo a base ao mesmo
+ *     tempo esperam a primeira leitura terminar e usam o mesmo resultado.
+ *
  * COMO INSTALAR:
  *   1. Substitua o código do Apps Script por este arquivo.
  *   2. Execute a função setupCompleto() uma vez (autorize as permissões).
@@ -3133,7 +3141,7 @@
 
 // CORREÇÃO: Alterado de 'const' para 'var' para evitar erro de re-declaração no V8 do Apps Script
 var CONFIG = {
-  VERSION: "4.5.0",
+  VERSION: "4.6.0",
   // Token mestre para integrações: NÃO fica mais no código (este código aparece no HTML do sistema).
   // Gere pelo menu ⚖️ GABPro > Gerar novo token de API; ele é guardado nas Propriedades do Script.
   API_TOKEN: "",
@@ -3712,6 +3720,10 @@ function doGet(e) {
     // (não abre a planilha, só lê uma propriedade do script).
     if (action === "version") {
       const info = DataVersion.info();
+      if (params.since) {
+        const mud = ChangeLog.desde(params.since, info.dataVersion);
+        if (mud) { info.changes = mud; info.changesFrom = String(params.since); }
+      }
       if (auth.sessao) {
         try {
           const p = Presenca.registrar(auth, params);
@@ -3752,6 +3764,20 @@ function doGet(e) {
       if (cached) {
         return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
       }
+      // Outro computador já está lendo esta mesma versão: espera e usa o resultado dele
+      const cache = CacheService.getScriptCache();
+      const flag = "gab_read_lendo_" + version;
+      let lendo = null;
+      try { lendo = cache.get(flag); } catch (err) { /* ignora */ }
+      if (lendo) {
+        for (let i = 0; i < 16; i++) {
+          Utilities.sleep(500);
+          const pronto = ReadCache.get(version);
+          if (pronto) return ContentService.createTextOutput(pronto).setMimeType(ContentService.MimeType.JSON);
+        }
+      } else {
+        try { cache.put(flag, "1", 30); } catch (err) { /* ignora */ }
+      }
     }
 
     const dbData = db.fetchAllData(tablesRequested);
@@ -3760,7 +3786,10 @@ function doGet(e) {
     dbData.serverTime = new Date().toISOString();
     const json = JSON.stringify(dbData);
 
-    if (!tablesRequested) ReadCache.put(version, json);
+    if (!tablesRequested) {
+      ReadCache.put(version, json);
+      try { CacheService.getScriptCache().remove("gab_read_lendo_" + version); } catch (err) { /* ignora */ }
+    }
     if (CONFIG.LOG_READS) logger.info("Sistema", "Extração total da base concluída (GET).");
 
     return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
@@ -3885,6 +3914,67 @@ var DataVersion = {
       values[this.PANEL_UPDATED_KEY] = Utils.nowStr();
       this.props().setProperties(values, false);
     } catch (e) { /* ignora */ }
+  }
+};
+
+/**
+ * Registro das últimas alterações (só no cache). Cada gravação guarda o que mudou; quem
+ * consulta "version" informando a própria versão recebe só a diferença, sem reler a planilha.
+ * Se o registro não cobrir o intervalo (edição manual, cache expirado), o front-end baixa tudo.
+ */
+var ChangeLog = {
+  KEY: "gab_changelog_v1",
+  MAX_BYTES: 95000,
+  MAX_ENTRADAS: 80,
+  MAX_ITENS: 400,
+  TTL_S: 21600,
+
+  ler_: function () {
+    try { const v = CacheService.getScriptCache().get(this.KEY); const l = v ? JSON.parse(v) : []; return Array.isArray(l) ? l : []; } catch (e) { return []; }
+  },
+  limpo_: function (table, rec, id) {
+    const out = { id: String(id) };
+    SCHEMA[table].forEach(function (k) { if (k !== "id" && Object.prototype.hasOwnProperty.call(rec, k)) out[k] = Utils.cleanValue(rec[k]); });
+    return out;
+  },
+  /** Chamado dentro da trava de gravação, logo após aplicar o lote. */
+  registrar: function (prev, versao, user, ops, results) {
+    try {
+      const mud = [];
+      ops.forEach(function (op, i) {
+        const r = results[i];
+        if (!r || !r.ok || !op) return;
+        if (op.op === "delete") { if (r.action === "deleted") mud.push({ o: "d", t: op.table, id: String(r.id) }); return; }
+        mud.push({ o: "u", t: op.table, r: ChangeLog.limpo_(op.table, op.record, r.id) });
+      });
+      let lista = this.ler_();
+      lista.push({ p: String(prev), v: String(versao), by: String(user || ""), m: mud });
+      if (lista.length > this.MAX_ENTRADAS) lista = lista.slice(-this.MAX_ENTRADAS);
+      let txt = JSON.stringify(lista);
+      while (txt.length > this.MAX_BYTES && lista.length > 1) { lista.shift(); txt = JSON.stringify(lista); }
+      const cache = CacheService.getScriptCache();
+      if (txt.length > this.MAX_BYTES) { cache.remove(this.KEY); return; }
+      cache.put(this.KEY, txt, this.TTL_S);
+    } catch (e) { /* sem registro: os computadores baixam a base inteira, como antes */ }
+  },
+  /** Alterações de "desde" até "atual" (null se o registro não cobre o intervalo). */
+  desde: function (desde, atual) {
+    desde = String(desde); atual = String(atual);
+    if (!desde || desde === atual) return null;
+    const lista = this.ler_();
+    let i = -1;
+    for (let k = 0; k < lista.length; k++) { if (lista[k].p === desde) { i = k; break; } }
+    if (i === -1) return null;
+    const out = [];
+    let v = desde;
+    for (let k = i; k < lista.length; k++) {
+      if (lista[k].p !== v) return null;
+      for (let j = 0; j < lista[k].m.length; j++) out.push(lista[k].m[j]);
+      v = lista[k].v;
+      if (v === atual) break;
+    }
+    if (v !== atual || out.length > this.MAX_ITENS) return null;
+    return out;
   }
 };
 
@@ -5060,6 +5150,7 @@ class DashboardBuilder {
 
   /** Reconstrói o painel do zero (dados podem ser passados para evitar nova leitura). */
   build(dbData) {
+    const versaoInicial = DataVersion.get();   // gravações durante a montagem mantêm o painel "pendente"
     const data = dbData || new DatabaseManager(this.logger).fetchAllData();
     const s = PainelStats.compute(data);
     const info = DataVersion.info();
@@ -5089,7 +5180,7 @@ class DashboardBuilder {
     if (sheet.getMaxColumns() < this.NCOLS) sheet.insertColumnsAfter(sheet.getMaxColumns(), this.NCOLS - sheet.getMaxColumns());
 
     g.flush(sheet);
-    DataVersion.markPanelClean();
+    if (DataVersion.get() === versaoInicial) DataVersion.markPanelClean();
     this.logger.info("Sistema", `Painel atualizado (${s.total} processos, ${s.atrasados} atrasados).`);
     return s;
   }
@@ -5939,8 +6030,9 @@ function menuDesativarAutoPainel() {
 function atualizarPainelAgendado() {
   try { UserManager.applyPendingPasswords("Planilha"); } catch (e) { console.error("Senhas pendentes:", e); }
   if (!DataVersion.isPanelDirty()) return;
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) return; // alguém está gravando: tenta no próximo ciclo
+  // Trava própria do painel (a da planilha fica livre: gravações não esperam o painel)
+  const lock = LockService.getDocumentLock() || LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return; // outro painel em construção: tenta no próximo ciclo
   const logger = new LoggerManager();
   try {
     new DashboardBuilder(logger).build();
@@ -6154,6 +6246,7 @@ function handleBatch(db, logger, payload, user, single) {
     const prevVersion = DataVersion.get();
     const result = BatchWriter.apply(db, ops);
     const version = result.changed > 0 ? DataVersion.bump(user) : prevVersion;
+    if (result.changed > 0) ChangeLog.registrar(prevVersion, version, user, ops, result.results);
     logger.info(user, `Batch (${ops.length} op.): ${result.summary || "sem alterações"}`);
 
     if (single) {
@@ -6204,8 +6297,8 @@ function handleDelete(db, logger, payload, user) {
 
 /** Reconstrói o painel sob demanda (usado pelo front-end/integrações). */
 function handleRefreshPanel(db, logger, user) {
-  const lock = db.acquireLock();
-  if (!lock) return ResponseFactory.error("Sistema ocupado.", 409);
+  const lock = LockService.getDocumentLock() || LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return ResponseFactory.error("O painel já está sendo atualizado. Tente em instantes.", 409);
   try {
     new DashboardBuilder(logger).build();
     return ResponseFactory.success({ message: "Painel atualizado.", panelUpdatedAt: Utils.nowStr() });
@@ -6675,11 +6768,19 @@ var SessionManager = {
     return { token: token, exp: exp };
   },
 
+  cacheKey: function (token) { return "gab_sess_" + token; },
+
   get: function (token) {
     if (typeof token !== "string" || token.charAt(0) !== "S" || token.length < 30) return null;
     try {
-      const raw = PropertiesService.getScriptProperties().getProperty(this.PREFIX + token);
-      if (!raw) return null;
+      let raw = null;
+      const cache = CacheService.getScriptCache();
+      try { raw = cache.get(this.cacheKey(token)); } catch (e) { raw = null; }
+      if (!raw) {
+        raw = PropertiesService.getScriptProperties().getProperty(this.PREFIX + token);
+        if (!raw) return null;
+        try { cache.put(this.cacheKey(token), raw, 600); } catch (e) { /* ignora */ }
+      }
       const s = JSON.parse(raw);
       if (!s.exp || s.exp < Date.now()) { this.destroy(token); return null; }
       return { usuario: s.u, perfil: s.p, exp: s.exp, token: token };
@@ -6688,6 +6789,7 @@ var SessionManager = {
 
   destroy: function (token) {
     try { PropertiesService.getScriptProperties().deleteProperty(this.PREFIX + token); } catch (e) { /* ignora */ }
+    try { CacheService.getScriptCache().remove(this.cacheKey(token)); } catch (e) { /* ignora */ }
   },
 
   /** Encerra todas as sessões de um usuário (senha trocada, desativado, perfil alterado). */
@@ -6699,7 +6801,8 @@ var SessionManager = {
     Object.keys(all).forEach(function (k) {
       if (k.indexOf(SessionManager.PREFIX) !== 0) return;
       if (atual && k === SessionManager.PREFIX + atual) return;
-      try { if (Utils.normalizeKey(JSON.parse(all[k]).u) === alvo) props.deleteProperty(k); } catch (e) { props.deleteProperty(k); }
+      const sair = function () { props.deleteProperty(k); try { CacheService.getScriptCache().remove(SessionManager.cacheKey(k.substring(SessionManager.PREFIX.length))); } catch (e) { /* ignora */ } };
+      try { if (Utils.normalizeKey(JSON.parse(all[k]).u) === alvo) sair(); } catch (e) { sair(); }
     });
   },
 
@@ -7332,7 +7435,8 @@ function handleDiagnostico(auth, logger) {
                 if (tipo !== 'ocupado') registrarErroSync(tipo, e.message);
                 // Problemas de configuração (login/permissão) não se resolvem sozinhos em segundos
                 const base = (tipo === 'login' || tipo === 'permissao') ? 20000 : 3000;
-                espera = Math.min(base * tentativasSync, 60000);
+                // 1ª nova tentativa rápida (oscilação comum do Google); depois espera crescente
+                espera = base === 3000 && tentativasSync === 1 ? 1500 : Math.min(base * tentativasSync, 60000);
                 console.warn(`Fila Sync pausada [${tipo}] (${e.message}). Nova tentativa em ${espera / 1000}s...`);
                 mostrarAvisoSync('erro');
             }
@@ -7395,7 +7499,8 @@ function handleDiagnostico(auth, logger) {
         const MONITOR_MS = 8000;          // aba visível: confere alterações e presença a cada 8 s
         const MONITOR_OCULTO_MS = 30000;  // aba em segundo plano: só um sinal de presença a cada 30 s
         let ultimoSinalOculto = 0;
-        let alteracaoPendente = null;     // alteração alheia que espera um formulário ser fechado
+        let alteracaoPendente = null;
+        let falhasMonitor = 0;            // consultas seguidas que falharam     // alteração alheia que espera um formulário ser fechado
         let monitorTimer = null;
         let verificandoNuvem = false;
 
@@ -7439,13 +7544,15 @@ function handleDiagnostico(auth, logger) {
             verificandoNuvem = true;
             try {
                 const ctx = contextoPresenca();
-                const extra = `&action=version&aba=${encodeURIComponent(ctx.aba)}&ed=${encodeURIComponent(ctx.ed)}&st=${document.hidden ? 'ausente' : 'ativo'}`;
-                const res = await fetchComTimeout(urlComToken(extra), { redirect: 'follow' }, 15000);
+                const desde = dataVersionLocal !== null && !document.hidden ? `&since=${encodeURIComponent(dataVersionLocal)}` : '';
+                const extra = `&action=version&aba=${encodeURIComponent(ctx.aba)}&ed=${encodeURIComponent(ctx.ed)}&st=${document.hidden ? 'ausente' : 'ativo'}${desde}`;
+                const res = await fetchComTimeout(urlComToken(extra), { redirect: 'follow' }, 20000);
                 const json = JSON.parse(await res.text());
                 if (json.status !== 'success') {
                     if (Number(json.code) === 401) { sessaoExpirada(); return; }
                     throw new Error(json.message || 'erro');
                 }
+                falhasMonitor = 0;
                 registrarConexao(true);
                 if (Array.isArray(json.online)) atualizarPresenca(json.online, json.sessaoId);
 
@@ -7467,7 +7574,12 @@ function handleDiagnostico(auth, logger) {
                         return;
                     }
                     const antes = primeiraCarga ? null : fotografarDados();
-                    await buscarDoSheets(true);
+                    // Caminho rápido: o Apps Script já mandou só o que mudou (sem baixar a base inteira)
+                    if (!primeiraCarga && Array.isArray(json.changes) && String(json.changesFrom) === String(dataVersionLocal)) {
+                        aplicarMudancasNuvem(json.changes, v);
+                    } else {
+                        await buscarDoSheets(true);
+                    }
                     atualizarListaInteressados();
                     alteracaoPendente = null;
                     const pend = document.getElementById('rt-pendente'); if (pend) pend.remove();
@@ -7478,7 +7590,9 @@ function handleDiagnostico(auth, logger) {
                     }
                 }
             } catch (e) {
-                registrarConexao(false);
+                // Uma falha isolada (Google demorou, rede oscilou) não acende o aviso de "sem conexão"
+                falhasMonitor++;
+                if (falhasMonitor >= 2) registrarConexao(false);
             } finally {
                 verificandoNuvem = false;
             }
@@ -7945,8 +8059,8 @@ function handleDiagnostico(auth, logger) {
         // ===============================================
         // DIAGNÓSTICO DE CONEXÃO E GRAVAÇÃO
         // ===============================================
-        const FRONT_VERSION = '4.5.0';
-        const BACKEND_RECOMENDADO = '4.5.0';
+        const FRONT_VERSION = '4.6.0';
+        const BACKEND_RECOMENDADO = '4.6.0';
         let versaoBackend = '';
 
         function compararVersao(a, b) {
@@ -8557,7 +8671,15 @@ function handleDiagnostico(auth, logger) {
             carregandoInicial = true;
             try {
                 // Download obrigatório da planilha antes de exibir a interface
-                await buscarDoSheets(false);
+                // (uma nova tentativa automática se o Google demorar ou a rede oscilar)
+                try {
+                    await buscarDoSheets(false);
+                } catch (primeira) {
+                    if (reautenticando) throw primeira;
+                    setEtapaLoading(1, 'O Google demorou a responder. Tentando de novo...');
+                    await new Promise(ok => setTimeout(ok, 1500));
+                    await buscarDoSheets(false);
+                }
                 carregou = true;
             } catch (error) {
                 if (!reautenticando) showToast("Modo Offline: Não foi possível conectar à Nuvem.", "warning");
@@ -9050,6 +9172,47 @@ function handleDiagnostico(auth, logger) {
                 if (!silencioso) showToast(e instanceof TypeError ? "Erro de conexão com a nuvem." : `Falha: ${e.message}`, "error");
                 throw e;
             }
+        }
+
+        // Conversão dos registros vindos da planilha (usada na leitura completa e nas diferenças)
+        function textosRegistro(obj) { const out = {}; Object.keys(obj || {}).forEach(k => { out[k] = str(obj[k]); }); return out; }
+        function normRegistro(tabela, obj) {
+            const t = textosRegistro(obj);
+            if (tabela === 'processos') return { ...t, dataRetorno: normData(t.dataRetorno || t.data_retorno), dataArea: normData(t.dataArea || t.data_area) };
+            if (tabela === 'audiencias') return { ...t, data: normData(t.data), hora: normHora(t.hora) };
+            if (tabela === 'dilacoes') return { ...t, dataAnterior: normData(t.dataAnterior), novaData: normData(t.novaData) };
+            return t;
+        }
+        function listaDaTabela(tabela) {
+            return tabela === 'processos' ? processos : tabela === 'audiencias' ? audiencias : tabela === 'dilacoes' ? dilacoes : tabela === 'movimentacoes' ? historicoGeral : null;
+        }
+        // Aplica as alterações recebidas do Apps Script (mesma regra da gravação: campos ausentes são mantidos)
+        function aplicarMudancasNuvem(mudancas, novaVersao) {
+            mudancas.forEach(m => {
+                const lista = listaDaTabela(m.t); if (!lista) return;
+                if (m.o === 'd') {
+                    const i = lista.findIndex(x => str(x.id) === str(m.id));
+                    if (i !== -1) lista.splice(i, 1);
+                    return;
+                }
+                const id = str(m.r && m.r.id); if (!id) return;
+                const i = lista.findIndex(x => str(x.id) === id);
+                if (i === -1) { if (m.t === 'movimentacoes') lista.unshift(normRegistro(m.t, m.r)); else lista.push(normRegistro(m.t, m.r)); }
+                else lista[i] = normRegistro(m.t, Object.assign({}, lista[i], m.r));
+            });
+            dataVersionLocal = String(novaVersao);
+            aplicarPendentesNaMemoria();
+            atualizarTelasComDados();
+        }
+        function atualizarTelasComDados() {
+            const vis = id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden'); };
+            if (vis('tab-dashboard')) atualizarDashboard();
+            if (vis('tab-processos') || vis('tab-meudia') || vis('tab-metas')) atualizarViews();
+            if (vis('tab-audiencias')) renderTabelaAudiencias();
+            if (vis('tab-calendario')) renderizarCalendario();
+            if (vis('tab-alertas')) renderizarAbaAlertas();
+            if (vis('tab-movimentacoes')) renderizarAbaMovimentacoes();
+            if (vis('tab-equipe')) renderizarEquipe();
         }
 
         async function buscarDoSheets(silencioso = false) {

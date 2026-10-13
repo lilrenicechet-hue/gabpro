@@ -1,8 +1,8 @@
 /* GABPro — service worker (opcional). Coloque este arquivo na MESMA pasta do GABPro.html no site.
    Guarda uma cópia do sistema e das bibliotecas para abrir mais rápido e mesmo com internet instável.
    Os dados (Apps Script / planilha) nunca são guardados aqui: sempre vêm da nuvem. */
-const CACHE = 'gabpro-4.5.0';
-const ESSENCIAIS = ['./', './GABPro.html'];
+const CACHE = 'gabpro-4.6.0';
+const ESSENCIAIS = ['./', './index.html'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(ESSENCIAIS.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
@@ -20,7 +20,7 @@ self.addEventListener('fetch', (e) => {
   if (/script\.google(usercontent)?\.com$/.test(url.hostname) || url.hostname.endsWith('googleusercontent.com')) return;
   // Página do sistema: tenta a versão mais nova; sem internet, usa a cópia
   if (req.mode === 'navigate' || (url.origin === self.location.origin && /\.html?$/.test(url.pathname))) {
-    e.respondWith(fetch(req).then((r) => { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); return r; }).catch(() => caches.match(req).then((r) => r || caches.match('./GABPro.html'))));
+    e.respondWith(fetch(req).then((r) => { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); return r; }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))));
     return;
   }
   // Bibliotecas e fontes (CDN): usa a cópia e atualiza em segundo plano
