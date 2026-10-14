@@ -1,49 +1,33 @@
-// =====================================================================
-// GABDoc · service worker (sw.js)
-// Coloque este arquivo na mesma pasta do index.html no GitHub.
-// Faz o aplicativo instalado abrir mesmo com internet instável.
-// Os dados NUNCA ficam em cache: as chamadas ao Apps Script vão sempre direto à rede.
-// =====================================================================
-const VERSAO = 'gabdoc-v1.6.0';
+/* GABPro — service worker (opcional). Coloque este arquivo na MESMA pasta do GABPro.html no site.
+   Guarda uma cópia do sistema e das bibliotecas para abrir mais rápido e mesmo com internet instável.
+   Os dados (Apps Script / planilha) nunca são guardados aqui: sempre vêm da nuvem. */
+const CACHE = 'gabpro-4.9.0';
 const ESSENCIAIS = ['./', './index.html'];
-const CDNS = ['cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
-self.addEventListener('install', e => {
-  // Se algum arquivo faltar, instala mesmo assim (não trava o aplicativo)
-  e.waitUntil(caches.open(VERSAO)
-    .then(c => Promise.all(ESSENCIAIS.map(u => c.add(u).catch(() => null))))
-    .then(() => self.skipWaiting()));
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => Promise.all(ESSENCIAIS.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => k !== VERSAO).map(k => caches.delete(k))))
-    .then(() => self.clients.claim()));
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('gabpro-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-self.addEventListener('fetch', e => {
+self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET') return;                                   // POST da API: sempre rede
+  if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (/script\.google(usercontent)?\.com$/.test(url.hostname)) return; // dados: sempre rede
-  const mesmoSite = url.origin === self.location.origin;
-  if (!mesmoSite && !CDNS.includes(url.hostname)) return;
-
-  if (mesmoSite && req.mode === 'navigate') {
-    // Página: rede primeiro (pega atualizações); sem internet, usa a cópia guardada
-    e.respondWith(
-      fetch(req)
-        .then(r => { const c = r.clone(); caches.open(VERSAO).then(x => x.put('./index.html', c)); return r; })
-        .catch(() => caches.match('./index.html').then(r => r || caches.match('./')))
-    );
+  // Dados do sistema: sempre direto da nuvem
+  if (/script\.google(usercontent)?\.com$/.test(url.hostname) || url.hostname.endsWith('googleusercontent.com')) return;
+  // Página do sistema: tenta a versão mais nova; sem internet, usa a cópia
+  if (req.mode === 'navigate' || (url.origin === self.location.origin && /\.html?$/.test(url.pathname))) {
+    e.respondWith(fetch(req).then((r) => { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); return r; }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))));
     return;
   }
-  // Bibliotecas (Tailwind, ícones, gráficos, fontes): cache primeiro, atualiza em segundo plano
-  e.respondWith(caches.match(req).then(guardado => {
-    const rede = fetch(req).then(r => {
-      if (r && (r.ok || r.type === 'opaque')) { const c = r.clone(); caches.open(VERSAO).then(x => x.put(req, c)); }
-      return r;
-    }).catch(() => guardado);
-    return guardado || rede;
-  }));
+  // Bibliotecas e fontes (CDN): usa a cópia e atualiza em segundo plano
+  if (/cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.tailwindcss\.com/.test(url.hostname)) {
+    e.respondWith(caches.open(CACHE).then((c) => c.match(req).then((cached) => {
+      const rede = fetch(req).then((r) => { if (r && (r.ok || r.type === 'opaque')) c.put(req, r.clone()); return r; }).catch(() => cached);
+      return cached || rede;
+    })));
+  }
 });
