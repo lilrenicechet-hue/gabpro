@@ -1,7 +1,7 @@
 /* GABPro — service worker (opcional). Coloque este arquivo na MESMA pasta do GABPro.html no site.
    Guarda uma cópia do sistema e das bibliotecas para abrir mais rápido e mesmo com internet instável.
    Os dados (Apps Script / planilha) nunca são guardados aqui: sempre vêm da nuvem. */
-const CACHE = 'gabpro-4.9.0';
+const CACHE = 'gabpro-4.9.1';
 const ESSENCIAIS = ['./', './index.html'];
 
 self.addEventListener('install', (e) => {
