@@ -1514,6 +1514,8 @@
         html.sem-sistema-sincronizar [data-perm="sistema.sincronizar"],
         html.sem-tela-cobrancas [data-perm="tela.cobrancas"],
         html.sem-cob-responder [data-perm="cob.responder"],
+        html.sem-cob-email [data-perm="cob.email"],
+        html.sem-cob-aprovar [data-perm="cob.aprovar"],
         html.sem-proc-exportar [onclick*="CSV()"],
         html.sem-proc-dilacao [onclick*="abrirModalDilacao"],
         html.sem-proc-editar [onclick*="mdiaConcluir"],
@@ -1983,6 +1985,136 @@
         html.escuro .cob-ref { background: rgba(124, 58, 237, .12); border-color: rgba(167, 139, 250, .3); color: #ddd6fe; }
         html.escuro .cob-ref button { color: #c4b5fd; }
         @media (prefers-reduced-motion: reduce) { .cob-kpi, .cob-sec, .cob-bt { transition: none; } }
+        /* ===== v4.17: encaminhar cobranças por e-mail ===== */
+        .cob-lista-sel .cob-tr { grid-template-columns: 26px 48px minmax(0, 1.6fr) 84px 130px minmax(120px, 1fr) 176px; cursor: pointer; }
+        .cob-lista-sel .cob-tr.th { cursor: default; }
+        .cob-lista-sel div.cob-tr:hover { background: #f8fafc; }
+        .cob-lista-sel .cob-tr.sel { background: #eff6ff; }
+        .cob-lista-sel .cob-tr:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .cob-ck { display: flex; align-items: center; justify-content: center; width: 26px; height: 34px; cursor: pointer; }
+        .cob-ck input { width: 16px; height: 16px; accent-color: #1d4ed8; cursor: pointer; }
+        .cob-env-tag { color: #1d4ed8; font-weight: 600; }
+        .cob-selbar { position: sticky; bottom: 0; z-index: 5; margin: 10px -6px -4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border-radius: 13px; background: #0f1d3a; color: #e2e8f0; box-shadow: 0 14px 30px -14px rgba(15, 23, 42, .6); }
+        .cob-selbar.hidden { display: none; }
+        .cob-selbar-n { flex: 1; min-width: 0; font-size: 13px; }
+        .cob-selbar-n b { color: #fff; font-size: 15px; }
+        .cob-selbar-n small { display: block; font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cob-selbar .cob-bt.discreto { color: #cbd5e1; background: transparent; border-color: transparent; }
+        .cob-selbar .cob-bt.discreto:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+        /* Janela do e-mail */
+        #cobmail-corpo { display: flex; flex-direction: column; min-height: 0; max-height: 94vh; }
+        .cm-cab { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
+        .cm-ic { width: 40px; height: 40px; border-radius: 12px; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .cm-cab h3 { font-size: 16px; font-weight: 800; color: #0f172a; }
+        .cm-cab p { font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cm-abas { display: none; background: #f1f5f9; border-radius: 10px; padding: 3px; }
+        .cm-abas button { font-size: 12px; font-weight: 700; color: #475569; padding: 6px 11px; border-radius: 8px; }
+        .cm-abas button.ativo { background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+        .cm-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); min-height: 0; flex: 1; }
+        .cm-form { padding: 14px 18px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 11px; min-height: 0; }
+        .cm-form > * { flex-shrink: 0; }
+        .cm-form .hidden { display: none; }
+        .cm-campo > label, .cm-lbl { display: block; font-size: 11.5px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+        .cm-campo label em { font-style: normal; font-weight: 500; color: #94a3b8; }
+        .cm-rot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+        .cm-rot > label, .cm-rot .cm-lbl { margin: 0; font-size: 11.5px; font-weight: 700; color: #334155; }
+        .cm-campo input[type=text], .cm-campo input[type=email]:not(.cm-chips input), .cm-campo textarea, .cm-marca select { width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 11px; font-size: 13px; color: #0f172a; background: #fff; }
+        .cm-campo textarea { resize: vertical; line-height: 1.55; }
+        #cm-msg { font-size: 13.5px; min-height: 180px; }
+        .cm-campo input:focus, .cm-campo textarea:focus, .cm-marca select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+        .cm-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 40px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 5px 7px; background: #fff; cursor: text; }
+        .cm-chips:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+        .cm-chips input { flex: 1; min-width: 160px; border: 0 !important; outline: none; box-shadow: none !important; padding: 4px; font-size: 13px; background: transparent !important; color: #0f172a; }
+        .cm-chips input::-webkit-calendar-picker-indicator { display: none !important; }
+        .cm-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-size: 12.5px; font-weight: 600; color: #1e3a8a; background: #e0e7ff; border-radius: 999px; padding: 3px 4px 3px 10px; }
+        .cm-chip.inval { color: #991b1b; background: #fee2e2; }
+        .cm-chip button { width: 20px; height: 20px; border-radius: 999px; font-size: 10px; color: inherit; opacity: .7; }
+        .cm-chip button:hover { opacity: 1; background: rgba(15, 23, 42, .08); }
+        .cm-ajuda { display: block; font-size: 11px; color: #64748b; margin-top: 4px; }
+        .cm-link { font-size: 11.5px; font-weight: 700; color: #1d4ed8; display: inline-flex; gap: 5px; align-items: center; }
+        .cm-link:hover { text-decoration: underline; }
+        .cm-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .cm-marca { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: #475569; }
+        .cm-marca select { width: auto; padding: 4px 8px; font-size: 12px; }
+        .cm-anexos { display: flex; flex-direction: column; gap: 6px; }
+        .cm-anexo { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid #e2e8f0; border-radius: 11px; background: #fff; cursor: pointer; }
+        .cm-anexo input { width: 16px; height: 16px; accent-color: #1d4ed8; flex-shrink: 0; }
+        .cm-anexo > i { color: var(--c); font-size: 18px; flex-shrink: 0; }
+        .cm-anexo b { display: block; font-size: 12px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cm-anexo small { display: block; font-size: 11px; color: #64748b; }
+        .cm-anexo small.err { color: #dc2626; }
+        .cm-anexo small.err button { text-decoration: underline; font-weight: 700; color: inherit; }
+        .cm-anexo.fora { opacity: .55; }
+        .cm-anexo.fora b { text-decoration: line-through; }
+        .cm-previa { border-left: 1px solid #e2e8f0; background: #eef2f7; display: flex; flex-direction: column; min-height: 0; }
+        .cm-env { padding: 10px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 3px; }
+        .cm-env div { display: flex; gap: 8px; font-size: 12px; min-width: 0; }
+        .cm-env span { width: 54px; flex-shrink: 0; color: #64748b; }
+        .cm-env b { color: #0f172a; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cm-env em { font-style: normal; color: #94a3b8; font-weight: 500; }
+        #cm-iframe { flex: 1; width: 100%; min-height: 420px; border: 0; background: #eef2f7; }
+        .cm-rodape { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid #e2e8f0; }
+        .cm-nota { flex: 1; font-size: 11.5px; color: #64748b; display: flex; gap: 6px; align-items: baseline; }
+        .cm-rodape .cob-bt { height: 38px; padding: 0 16px; font-size: 13px; }
+        .cm-rodape .cob-bt:disabled { opacity: .6; cursor: not-allowed; }
+        @media (max-width: 1023px) {
+            .cm-abas { display: inline-flex; }
+            .cm-grade { grid-template-columns: 1fr; }
+            .cm-grade[data-aba="escrever"] .cm-previa, .cm-grade[data-aba="previa"] .cm-form { display: none; }
+            .cm-previa { border-left: 0; }
+            #cm-iframe { min-height: 60vh; }
+        }
+        @media (max-width: 900px) {
+            .cob-lista-sel .cob-tr { grid-template-columns: 26px 40px minmax(0, 1fr) auto; }
+            .cob-lista-sel .cob-tr > span:nth-child(4), .cob-lista-sel .cob-tr > span:nth-child(5), .cob-lista-sel .cob-tr > span:nth-child(6) { display: none; }
+        }
+        @media (max-width: 640px) {
+            .cm-duas { grid-template-columns: 1fr; }
+            .cm-cab p { display: none; }
+            .cm-nota { display: none; }
+            .cm-rodape { justify-content: flex-end; }
+        }
+        html.escuro .cob-sit { background: color-mix(in srgb, var(--c) 18%, #182132) !important; }
+        html.escuro .cm-rot > label { color: #cbd5e1; }
+        html.escuro .cm-chips input { color: #e2e8f0; }
+        html.escuro .cob-lista-sel div.cob-tr:hover { background: #24304a; }
+        html.escuro .cob-lista-sel .cob-tr.sel { background: rgba(37, 99, 235, .16); }
+        html.escuro .cob-env-tag { color: #93c5fd; }
+        html.escuro .cm-cab, html.escuro .cm-rodape, html.escuro .cm-env { border-color: #2a3650; }
+        html.escuro .cm-cab h3, html.escuro .cm-env b, html.escuro .cm-anexo b { color: #e2e8f0; }
+        html.escuro .cm-campo > label, html.escuro .cm-lbl, html.escuro .cm-marca { color: #cbd5e1; }
+        html.escuro .cm-campo input[type=text], html.escuro .cm-campo input[type=email], html.escuro .cm-campo textarea, html.escuro .cm-marca select, html.escuro .cm-chips, html.escuro .cm-anexo { background: #111a2c; border-color: #2a3650; color: #e2e8f0; }
+        html.escuro .cm-chips input { background: transparent; }
+        html.escuro .cm-chip { background: rgba(99, 102, 241, .22); color: #c7d2fe; }
+        html.escuro .cm-chip.inval { background: rgba(220, 38, 38, .2); color: #fecaca; }
+        html.escuro .cm-env { background: #182132; }
+        html.escuro .cm-previa { background: #0d1424; border-color: #2a3650; }
+        html.escuro .cm-abas { background: #111a2c; }
+        html.escuro .cm-abas button { color: #94a3b8; }
+        html.escuro .cm-abas button.ativo { background: #24304a; color: #e2e8f0; }
+        html.escuro .cm-link { color: #93c5fd; }
+        /* ===== v4.18: aprovação da chefia ===== */
+        #cob-aprov { border-color: #ddd6fe; background: linear-gradient(180deg, #faf8ff, #fff 70%); }
+        .apr-lista { display: flex; flex-direction: column; gap: 6px; }
+        .apr-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: #fff; border: 1px solid #ede9fe; border-left: 4px solid var(--c); }
+        .apr-av { width: 34px; height: 34px; border-radius: 999px; background: #ede9fe; color: #6d28d9; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .apr-l1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .apr-l1 b { font-size: 13px; color: #0f172a; }
+        .apr-item small { display: block; font-size: 11.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+        .apr-item small.apr-ass { color: #334155; font-style: italic; }
+        .apr-item small.apr-mot { white-space: normal; color: #b91c1c; display: flex; gap: 6px; align-items: baseline; }
+        .apr-bts { display: flex; gap: 6px; flex-shrink: 0; }
+        .cob-env-tag.apr { color: #7c3aed; }
+        #cob-badge-apr { height: 20px; padding: 0 7px; gap: 4px; border-radius: 999px; background: #7c3aed; color: #fff; font-size: 10.5px; font-weight: 800; align-items: center; justify-content: center; margin-left: auto; }
+        #cob-badge-apr + #cob-badge { margin-left: 4px; }
+        #cob-badge-apr i { font-size: 9px; }
+        @media (max-width: 640px) { .apr-item { flex-wrap: wrap; } .apr-bts { width: 100%; padding-left: 46px; } }
+        html.escuro #cob-aprov { background: linear-gradient(180deg, rgba(124, 58, 237, .1), #182132 70%); border-color: rgba(167, 139, 250, .3); }
+        html.escuro .apr-item { background: #182132; border-color: #2a3650; border-left-color: var(--c); }
+        html.escuro .apr-l1 b { color: #e2e8f0; }
+        html.escuro .apr-item small.apr-ass { color: #cbd5e1; }
+        html.escuro .apr-av { background: rgba(124, 58, 237, .25); color: #ddd6fe; }
+        html.escuro .cob-env-tag.apr { color: #c4b5fd; }
     </style>
     <style id="tema-escuro">
 /* Tema escuro: gerado por build/gera_escuro.js a partir das classes usadas (não editar à mão) */
@@ -3425,7 +3557,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
 </head>
 <body class="text-brand-dark h-screen flex overflow-hidden">
     <!-- Novidades de cada versão (mostradas no aviso de atualização) -->
-    <script type="application/json" id="gab-novidades">{"4.16.0": ["Nova tela Cobranças: notificações, reiterações e advertências em um só lugar", "Registro da resposta de cada secretaria, com prazo, documento e tempo de resposta", "Próxima cobrança montada só com o que continua pendente; advertência vencida vai ao Gabinete"], "4.15.0": ["Marca d'água nos relatórios em PDF: GABPro, Confidencial, Rascunho ou Cópia controlada"], "4.14.1": ["A equipe também pode emitir o relatório de cobrança às secretarias"], "4.14.0": ["Relatório de cobrança às secretarias adjuntas: 1ª notificação, 2ª reiteração e 3ª advertência", "Cobranças registradas no histórico de cada processo"], "4.13.0": ["Aviso de atualização disponível, com o que mudou em cada versão", "Atualizar com um clique, sem perder alterações pendentes"], "4.12.0": ["Capa nos relatórios e na ata em PDF, com filtros aplicados e selo de autenticidade"], "4.11.0": ["Ajustes de permissão por usuário na Administração", "Equipe gera relatórios PDF (sem o desempenho da equipe)"], "4.10.0": ["Perfis de acesso personalizados e permissões por perfil"], "4.9.1": ["Histórico do processo dentro da tela de edição"], "4.9.0": ["Secretaria GS – Gabinete do Secretário", "Modo claro e escuro", "Área de Administração e Usuários aprimorados"]}</script>
+    <script type="application/json" id="gab-novidades">{"4.18.0": ["Envio de cobranças por e-mail com aprovação do Chefe de Gabinete ou de Unidade", "A chefia revisa, ajusta, aprova e envia, ou devolve com o motivo", "A equipe acompanha seus pedidos na tela Cobranças"], "4.17.0": ["Encaminhar cobranças por e-mail: escolha os destinatários, quem vai em cópia e escreva o texto", "E-mail formal com a identidade do GABPro e o PDF da cobrança anexado", "Selecione várias cobranças na lista e envie de uma vez"], "4.16.0": ["Nova tela Cobranças: notificações, reiterações e advertências em um só lugar", "Registro da resposta de cada secretaria, com prazo, documento e tempo de resposta", "Próxima cobrança montada só com o que continua pendente; advertência vencida vai ao Gabinete"], "4.15.0": ["Marca d'água nos relatórios em PDF: GABPro, Confidencial, Rascunho ou Cópia controlada"], "4.14.1": ["A equipe também pode emitir o relatório de cobrança às secretarias"], "4.14.0": ["Relatório de cobrança às secretarias adjuntas: 1ª notificação, 2ª reiteração e 3ª advertência", "Cobranças registradas no histórico de cada processo"], "4.13.0": ["Aviso de atualização disponível, com o que mudou em cada versão", "Atualizar com um clique, sem perder alterações pendentes"], "4.12.0": ["Capa nos relatórios e na ata em PDF, com filtros aplicados e selo de autenticidade"], "4.11.0": ["Ajustes de permissão por usuário na Administração", "Equipe gera relatórios PDF (sem o desempenho da equipe)"], "4.10.0": ["Perfis de acesso personalizados e permissões por perfil"], "4.9.1": ["Histórico do processo dentro da tela de edição"], "4.9.0": ["Secretaria GS – Gabinete do Secretário", "Modo claro e escuro", "Área de Administração e Usuários aprimorados"]}</script>
 
     <!-- Tela de Login Split-Screen Full-Width (Sem aspecto de pop-up) -->
     <div id="login-screen" class="fixed inset-0 z-[100] flex flex-col md:flex-row bg-brand-dark transition-opacity duration-500 overflow-hidden">
@@ -3575,6 +3707,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
                         <button onclick="switchTab('cobrancas')" id="btn-tab-cobrancas" class="w-full flex items-center space-x-3 px-3 py-2.5 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg font-medium transition-colors group hidden">
                             <i class="fa-solid fa-envelope-open-text w-5 text-center group-hover:scale-110 transition-transform"></i>
                             <span class="nav-text text-sm flex-1 text-left">Cobranças</span>
+                            <span id="cob-badge-apr" class="nav-text hidden" title="E-mails aguardando sua aprovação"></span>
                             <span id="cob-badge" class="nav-text hidden"></span>
                         </button>
                     </div>
@@ -3744,6 +3877,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
                 <div class="px-4 sm:px-6 lg:px-8 -mt-6 flex-1 flex flex-col min-h-0 relative z-10 pb-4 w-full">
                     <div class="flex-1 overflow-y-auto scrollbar-thin space-y-4 pb-2">
                         <div id="cob-kpis" class="cob-kpis"></div>
+                        <div id="cob-aprov" class="cob-bloco hidden" aria-live="polite"></div>
                         <div id="cob-acoes" class="cob-bloco hidden"></div>
                         <div id="cob-secs" class="cob-bloco"></div>
                         <div class="cob-bloco">
@@ -3763,6 +3897,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
                                 </div>
                             </div>
                             <div id="cob-lista"></div>
+                            <div id="cob-selbar" class="cob-selbar hidden" role="region" aria-label="Cobranças selecionadas"></div>
                         </div>
                     </div>
                 </div>
@@ -5506,6 +5641,9 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
     <div id="modal-cob" onclick="if (event.target === this) toggleModal('modal-cob')" class="fixed inset-0 bg-brand-dark/70 backdrop-blur-sm hidden items-center justify-center z-[100] p-4 transition-all duration-300" role="dialog" aria-modal="true" aria-labelledby="cob-det-titulo">
         <div id="cob-det" class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]"></div>
     </div>
+    <div id="modal-cobmail" class="fixed inset-0 bg-brand-dark/70 backdrop-blur-sm hidden items-center justify-center z-[100] p-3 sm:p-4 transition-all duration-300" role="dialog" aria-modal="true" aria-labelledby="cobmail-titulo" onkeydown="if (event.key === 'Escape') cmFechar()">
+        <div id="cobmail-corpo" class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden"></div>
+    </div>
     <div id="modal-metas" onclick="if (event.target === this) toggleModal('modal-metas')" class="fixed inset-0 bg-brand-dark/70 backdrop-blur-sm hidden items-center justify-center z-[100] p-4 transition-all duration-300">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-white">
@@ -5662,7 +5800,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
  * =========================================================================================
  * GABPRO - SISTEMA DE GESTÃO DE PROCESSOS JURÍDICOS (ENTERPRISE BACKEND)
  * =========================================================================================
- * Versão: 4.16.0 (Acompanhamento de notificações, reiterações e advertências)
+ * Versão: 4.18.0 (Aprovação da chefia antes do envio de cobranças por e-mail)
  * Descrição: API RESTful Serverless baseada em Google Apps Script.
  *
  * Funcionalidades mantidas da v3.5:
@@ -5747,7 +5885,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
 
 // CORREÇÃO: Alterado de 'const' para 'var' para evitar erro de re-declaração no V8 do Apps Script
 var CONFIG = {
-  VERSION: "4.16.0",
+  VERSION: "4.18.0",
   // Token mestre para integrações: NÃO fica mais no código (este código aparece no HTML do sistema).
   // Gere pelo menu ⚖️ GABPro > Gerar novo token de API; ele é guardado nas Propriedades do Script.
   API_TOKEN: "",
@@ -6256,6 +6394,8 @@ function doPost(e) {
     if (action === "change_password") return handleChangePassword(auth, payload, logger);
     if (action === "diagnostico") return handleDiagnostico(auth, logger);
     if (action === "confirm_password") return handleConfirmPassword(auth, payload);
+    if (action === "cobranca_email") return handleCobrancaEmail(auth, payload, logger);
+    if (action === "cobranca_email_solicitar" || action === "cobranca_email_listar" || action === "cobranca_email_decidir") return handleAprovacaoEmail(action, auth, payload, logger);
     if (action === "admin_list_users" || action === "admin_save_user" || action === "admin_delete_user" || action === "admin_logout_user") {
       return handleAdminUsers(action, auth, payload, logger);
     }
@@ -8719,8 +8859,8 @@ var Perfis = {
            "tela.equipe", "tela.reuniao", "tela.tv", "tela.metas", "tela.relatorios", "tela.admin",
            "proc.criar", "proc.editar", "proc.excluir", "proc.lote", "proc.dilacao", "proc.exportar",
            "aud.gerir", "equipe.transferir", "metas.editar", "usuarios.gerenciar", "sistema.sincronizar", "dados.porPessoa", "rel.equipe", "rel.cobranca",
-           "tela.cobrancas", "cob.responder"],
-  EQUIPE: ["tela.dashboard", "tela.mapa", "tela.processos", "tela.movimentacoes", "tela.alertas", "tela.cobrancas", "tela.audiencias", "tela.agenda", "tela.relatorios", "rel.cobranca", "cob.responder",
+           "tela.cobrancas", "cob.responder", "cob.email", "cob.aprovar"],
+  EQUIPE: ["tela.dashboard", "tela.mapa", "tela.processos", "tela.movimentacoes", "tela.alertas", "tela.cobrancas", "tela.audiencias", "tela.agenda", "tela.relatorios", "rel.cobranca", "cob.responder", "cob.email",
            "proc.criar", "proc.editar", "proc.excluir", "proc.lote", "proc.dilacao", "proc.exportar", "aud.gerir"],
   USR_CACHE_KEY: "gab_permusr_v1",
   _usuarios: null,
@@ -8773,7 +8913,7 @@ var Perfis = {
     try { CacheService.getScriptCache().removeAll([this.CACHE_KEY, this.USR_CACHE_KEY]); } catch (e) { /* ignora */ }
   },
   /** v4.11: a Equipe passa a gerar relatórios (sem o de desempenho da equipe). */
-  PERFIS_VER: 3,
+  PERFIS_VER: 4,
   migrar: function (arr, ver) {
     return arr.map(function (p) {
       if (!Utils.isPlainObject(p) || !Utils.isPlainObject(p.permissoes)) return p;
@@ -8793,6 +8933,10 @@ var Perfis = {
       if ((ver || 0) < 3) {
         if (!tem("tela.cobrancas")) perm["tela.cobrancas"] = perm["rel.cobranca"] === true;
         if (!tem("cob.responder")) perm["cob.responder"] = perm["rel.cobranca"] === true;
+      }
+      // v4.17: quem emite cobranças também pode encaminhá-las por e-mail
+      if ((ver || 0) < 4) {
+        if (!tem("cob.email")) perm["cob.email"] = perm["rel.cobranca"] === true;
       }
       return Object.assign({}, p, { permissoes: perm });
     });
@@ -10020,6 +10164,281 @@ function handleAdminUsers(action, auth, payload, logger) {
 // 19. DIAGNÓSTICO (usado pelo botão "Diagnóstico de conexão" do sistema)
 // =========================================================================================
 
+/**
+ * E-mail de encaminhamento de cobrança (v4.17). A MESMA função existe no Apps Script (envio)
+ * e no GABPro.html (prévia), para o que se vê na prévia ser exatamente o que é enviado.
+ * d = { mensagem, assinatura, enviadoEm, aprovadoPor, cobrancas: [{ nivel, sec, secNome, codigo, prazo, pendencias }] }
+ */
+function montarEmailCobranca(d) {
+  var NV = {
+    1: { rot: "1ª Cobrança", nome: "Notificação", cor: "#b45309", fundo: "#fef3c7" },
+    2: { rot: "2ª Cobrança", nome: "Notificação reiterada", cor: "#c2410c", fundo: "#ffedd5" },
+    3: { rot: "3ª Cobrança", nome: "Advertência", cor: "#b91c1c", fundo: "#fee2e2" }
+  };
+  var esc = function (v) { return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+  var F = "font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+  var cobs = (d.cobrancas || []).slice(0, 20);
+  var maior = cobs.reduce(function (m, c) { return Math.max(m, Number(c.nivel) || 1); }, 1);
+  var M = NV[maior] || NV[1];
+  var unica = cobs.length === 1 ? cobs[0] : null;
+  var rotulo = unica ? (NV[unica.nivel] || NV[1]).rot + " · " + (NV[unica.nivel] || NV[1]).nome : cobs.length + " cobranças em anexo";
+  var titulo = maior === 3 ? "Advertência por demandas pendentes" : "Cobrança de demandas pendentes";
+  var paragrafos = String(d.mensagem || "").replace(/\r\n/g, "\n").split(/\n{2,}/).map(function (p) { return p.trim(); }).filter(Boolean)
+    .map(function (p) { return '<p style="margin:0 0 14px;' + F + 'font-size:14.5px;line-height:1.65;color:#1e293b">' + esc(p).replace(/\n/g, "<br>") + "</p>"; }).join("");
+  var linhas = cobs.map(function (c, i) {
+    var N = NV[c.nivel] || NV[1];
+    var n = Number(c.pendencias) || 0;
+    return '<tr>' +
+      '<td style="padding:12px 0 12px 14px;' + (i ? "border-top:1px solid #e8edf3;" : "") + 'width:44px;vertical-align:middle">' +
+        '<div style="width:38px;height:38px;line-height:38px;border-radius:19px;text-align:center;background:' + N.fundo + ';color:' + N.cor + ';' + F + 'font-size:13px;font-weight:800">' + esc(c.nivel) + 'ª</div></td>' +
+      '<td style="padding:12px 10px;' + (i ? "border-top:1px solid #e8edf3;" : "") + 'vertical-align:middle;' + F + '">' +
+        '<div style="font-size:13.5px;font-weight:700;color:#0f172a">' + esc(N.nome) + ' · Secretaria Adjunta ' + esc(c.sec) + '</div>' +
+        '<div style="font-size:12px;color:#64748b;margin-top:2px">' + (c.secNome ? esc(c.secNome) + " · " : "") + 'Código de verificação <span style="color:#0f172a;font-weight:600">' + esc(c.codigo) + '</span></div></td>' +
+      '<td align="right" style="padding:12px 14px 12px 6px;' + (i ? "border-top:1px solid #e8edf3;" : "") + 'vertical-align:middle;white-space:nowrap;' + F + '">' +
+        '<div style="font-size:11px;color:#64748b">Resposta até</div>' +
+        '<div style="font-size:14px;font-weight:800;color:' + N.cor + '">' + esc(c.prazo) + '</div>' +
+        '<div style="font-size:11px;color:#64748b">' + n + (n === 1 ? " demanda pendente" : " demandas pendentes") + '</div></td></tr>';
+  }).join("");
+  var assin = String(d.assinatura || "").replace(/\r\n/g, "\n").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+  var assinHTML = assin.map(function (l, i) { return '<div style="' + F + (i === 0 ? "font-size:14.5px;font-weight:700;color:#0f172a" : "font-size:13px;color:#475569") + ';line-height:1.5">' + esc(l) + "</div>"; }).join("");
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(titulo) + '</title></head>' +
+    '<body style="margin:0;padding:0;background:#eef2f7">' +
+    '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eef2f7"><tr><td align="center" style="padding:28px 12px">' +
+    '<table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border:1px solid #dbe2ec;border-radius:14px;overflow:hidden">' +
+      // Cabeçalho
+      '<tr><td style="background:#0f1d3a;padding:20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>' +
+        '<td style="vertical-align:middle;' + F + '"><div style="font-size:23px;font-weight:800;letter-spacing:-.3px;color:#ffffff;line-height:1">GAB<span style="color:#60a5fa">Pro</span></div>' +
+        '<div style="font-size:11px;color:#94a3b8;margin-top:5px">Gestão de prazos e processos</div></td>' +
+        '<td align="right" style="vertical-align:middle;' + F + 'font-size:11px;line-height:1.5;color:#cbd5e1">Secretaria de Estado de Educação<br><span style="color:#ffffff;font-weight:700">SEDUC · Mato Grosso</span></td>' +
+      '</tr></table></td></tr>' +
+      '<tr><td style="height:4px;line-height:4px;font-size:0;background:' + M.cor + '">&nbsp;</td></tr>' +
+      // Título
+      '<tr><td style="padding:26px 28px 4px;' + F + '">' +
+        '<div style="display:inline-block;font-size:11.5px;font-weight:700;color:' + M.cor + ';background:' + M.fundo + ';border-radius:999px;padding:4px 11px">' + esc(rotulo) + '</div>' +
+        '<div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:12px;line-height:1.3">' + esc(titulo) + '</div>' +
+      '</td></tr>' +
+      // Texto
+      '<tr><td style="padding:16px 28px 4px">' + paragrafos + '</td></tr>' +
+      // Anexos
+      (linhas ? '<tr><td style="padding:6px 28px 6px"><div style="' + F + 'font-size:12px;font-weight:700;color:#475569;margin:0 0 8px">' + (cobs.length === 1 ? "Documento em anexo" : "Documentos em anexo") + '</div>' +
+        '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:12px;background:#fbfcfe">' + linhas + '</table></td></tr>' : '') +
+      // Assinatura
+      '<tr><td style="padding:22px 28px 26px"><div style="' + F + 'font-size:14.5px;color:#1e293b;margin-bottom:14px">Atenciosamente,</div>' +
+        '<table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr><td style="border-left:3px solid ' + M.cor + ';padding:2px 0 2px 12px">' + assinHTML + '</td></tr></table></td></tr>' +
+      // Rodapé
+      '<tr><td style="background:#f6f8fb;border-top:1px solid #e2e8f0;padding:16px 28px;' + F + 'font-size:11.5px;line-height:1.6;color:#64748b">' +
+        'Mensagem enviada pelo GABPro' + (d.enviadoEm ? " em " + esc(d.enviadoEm) : "") + '. ' +
+        (d.aprovadoPor ? 'Envio aprovado por ' + esc(d.aprovadoPor) + '. ' : '') +
+        'A autenticidade de cada documento anexo pode ser conferida pelo código de verificação impresso no PDF. ' +
+        'Ao responder, mantenha o código no assunto para facilitar o registro da resposta.' +
+      '</td></tr>' +
+    '</table></td></tr></table></body></html>';
+}
+
+/**
+ * Encaminha cobranças por e-mail (v4.17): texto do usuário no modelo formal do GABPro,
+ * com o PDF de cada cobrança anexado. Só envia quem tem a permissão "cob.email".
+ */
+const EmailCobranca = {
+  RX_EMAIL: /^[^\s@,;<>()"]+@[^\s@,;<>()"]+\.[^\s@,;<>()"]+$/,
+  MAX_PARA: 10, MAX_CC: 20, MAX_ANEXOS: 10, MAX_BYTES: 20 * 1024 * 1024,
+  lista(v) {
+    const arr = Array.isArray(v) ? v : String(v || "").split(/[,;\s]+/);
+    const vistos = {};
+    return arr.map(x => String(x || "").trim().toLowerCase()).filter(x => x && !vistos[x] && (vistos[x] = true));
+  },
+  texto(d) {
+    const linhas = [String(d.mensagem || "").trim(), ""];
+    (d.cobrancas || []).forEach(c => linhas.push(`• ${c.nivel}ª cobrança · Secretaria Adjunta ${c.sec} · resposta até ${c.prazo} · código ${c.codigo}`));
+    linhas.push("", "Atenciosamente,", String(d.assinatura || "").trim(), "", "Mensagem enviada pelo GABPro.");
+    return linhas.join("\n");
+  },
+  autorizado() {
+    try { MailApp.getRemainingDailyQuota(); return true; } catch (e) { return false; }
+  }
+};
+/** Valida os campos do e-mail (sem anexos). Devolve { erro } ou { dados }. */
+EmailCobranca.validar = function (p) {
+  const para = EmailCobranca.lista(p.para), cc = EmailCobranca.lista(p.cc).filter(x => para.indexOf(x) === -1);
+  const invalidos = para.concat(cc).filter(x => !EmailCobranca.RX_EMAIL.test(x));
+  if (!para.length) return { erro: "Informe ao menos um destinatário." };
+  if (invalidos.length) return { erro: `E-mail inválido: ${invalidos.slice(0, 3).join(", ")}.` };
+  if (para.length > EmailCobranca.MAX_PARA || cc.length > EmailCobranca.MAX_CC) return { erro: `No máximo ${EmailCobranca.MAX_PARA} destinatários e ${EmailCobranca.MAX_CC} em cópia.` };
+  const assunto = String(p.assunto || "").replace(/[\r\n]+/g, " ").trim().slice(0, 200);
+  const mensagem = String(p.mensagem || "").trim().slice(0, 8000);
+  if (!assunto) return { erro: "Informe o assunto do e-mail." };
+  if (!mensagem) return { erro: "Escreva o texto do e-mail." };
+  const cobrancas = (Array.isArray(p.cobrancas) ? p.cobrancas : []).slice(0, 20).map(c => ({
+    nivel: Math.max(1, Math.min(3, parseInt(c && c.nivel, 10) || 1)),
+    sec: String(c && c.sec || "").slice(0, 20), secNome: String(c && c.secNome || "").slice(0, 120),
+    codigo: String(c && c.codigo || "").slice(0, 60), prazo: String(c && c.prazo || "").slice(0, 10),
+    pendencias: Math.max(0, parseInt(c && c.pendencias, 10) || 0)
+  }));
+  if (!cobrancas.length) return { erro: "Nenhuma cobrança selecionada." };
+  const responder = String(p.responderPara || "").trim().toLowerCase();
+  if (responder && !EmailCobranca.RX_EMAIL.test(responder)) return { erro: 'O endereço em "Respostas para" é inválido.' };
+  return { dados: { para: para, cc: cc, assunto: assunto, mensagem: mensagem, assinatura: String(p.assinatura || "").trim().slice(0, 600), responderPara: responder, cobrancas: cobrancas } };
+};
+
+/** Solicitações de envio que aguardam a aprovação da chefia (aba técnica oculta). */
+const AprovacoesEmail = {
+  NOME: "_AprovacoesEmail",
+  COLS: ["id", "criadoEm", "solicitante", "status", "codigos", "cobrancas", "para", "cc", "assunto", "mensagem", "assinatura", "responderPara", "marca", "anexos", "decididoPor", "decididoEm", "motivo"],
+  JSON: { cobrancas: 1, para: 1, cc: 1, codigos: 1, anexos: 1 },
+  aba() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName(this.NOME);
+    if (!sh) {
+      sh = ss.insertSheet(this.NOME);
+      sh.getRange(1, 1, 1, this.COLS.length).setValues([this.COLS]).setFontWeight("bold");
+      sh.setFrozenRows(1);
+      try { sh.hideSheet(); } catch (e) { /* ignora */ }
+    }
+    return sh;
+  },
+  ler() {
+    const sh = this.aba(), n = sh.getLastRow();
+    if (n < 2) return [];
+    return sh.getRange(2, 1, n - 1, this.COLS.length).getValues().map((row, i) => {
+      const o = { _linha: i + 2 };
+      this.COLS.forEach((k, j) => {
+        const v = row[j];
+        if (this.JSON[k]) { try { o[k] = JSON.parse(String(v || "[]")); } catch (e) { o[k] = []; } }
+        else o[k] = v instanceof Date ? v.toISOString() : String(v == null ? "" : v);
+      });
+      return o;
+    }).filter(o => o.id);
+  },
+  gravar(o) {
+    const sh = this.aba();
+    const linha = o._linha || Math.max(sh.getLastRow(), 1) + 1;
+    const row = this.COLS.map(k => this.JSON[k] ? JSON.stringify(o[k] || []) : String(o[k] == null ? "" : o[k]));
+    sh.getRange(linha, 1, 1, this.COLS.length).setNumberFormat("@").setValues([row]);
+    o._linha = linha;
+    return o;
+  },
+  publico(o) { const c = Object.assign({}, o); delete c._linha; return c; }
+};
+
+function handleAprovacaoEmail(action, auth, payload, logger) {
+  const p = Utils.isPlainObject(payload) ? payload : {};
+  const quem = auth.usuario || "API";
+  const aprovador = auth.pode("cob.aprovar");
+  if (action === "cobranca_email_listar") {
+    if (!auth.pode("tela.cobrancas") && !aprovador && !auth.pode("cob.email")) return ResponseFactory.error("Seu perfil não tem acesso às cobranças.", 403);
+    const limite = Date.now() - 45 * 864e5;
+    const lista = AprovacoesEmail.ler()
+      .filter(o => (aprovador || o.solicitante === quem) && (o.status === "pendente" || Date.parse(o.decididoEm || o.criadoEm) >= limite))
+      .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm))).slice(0, 80).map(o => AprovacoesEmail.publico(o));
+    return ResponseFactory.success({ aprovacoes: lista, aprovador: aprovador });
+  }
+  if (action === "cobranca_email_solicitar") {
+    if (!auth.pode("cob.email")) return ResponseFactory.error("Seu perfil não pode encaminhar cobranças por e-mail.", 403);
+    const v = EmailCobranca.validar(p);
+    if (v.erro) return ResponseFactory.error(v.erro, 400);
+    const lock = LockService.getScriptLock(); lock.waitLock(20000);
+    try {
+      const pend = AprovacoesEmail.ler().filter(o => o.status === "pendente" && o.solicitante === quem);
+      const repetida = pend.find(o => o.codigos.some(c => v.dados.cobrancas.some(x => x.codigo === c)));
+      if (repetida) return ResponseFactory.error(`Já existe uma solicitação sua aguardando aprovação com a cobrança ${repetida.codigos.join(", ")}. Cancele-a antes de enviar outra.`, 409);
+      const o = AprovacoesEmail.gravar(Object.assign({
+        id: "APR-" + Utilities.getUuid().slice(0, 8).toUpperCase(), criadoEm: new Date().toISOString(), solicitante: quem, status: "pendente",
+        codigos: v.dados.cobrancas.map(c => c.codigo),
+        marca: String(p.marca || "padrao").replace(/[^\w]/g, "").slice(0, 20),
+        anexos: (Array.isArray(p.anexos) ? p.anexos : []).map(String).slice(0, 10), decididoPor: "", decididoEm: "", motivo: ""
+      }, v.dados));
+      logger.info(quem, `Envio de cobrança por e-mail aguardando aprovação (${o.id}): ${o.codigos.join(", ")}`);
+      return ResponseFactory.success({ message: "Enviado para aprovação.", aprovacao: AprovacoesEmail.publico(o) });
+    } finally { lock.releaseLock(); }
+  }
+  // Decidir: devolver (chefia) ou cancelar (quem pediu)
+  const decisao = String(p.decisao || "");
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const o = AprovacoesEmail.ler().find(x => x.id === String(p.id || ""));
+    if (!o) return ResponseFactory.error("Solicitação não encontrada.", 404);
+    if (o.status !== "pendente") return ResponseFactory.error(`Esta solicitação já foi ${o.status === "aprovado" ? "aprovada" : o.status === "devolvido" ? "devolvida" : "cancelada"} por ${o.decididoPor}.`, 409);
+    if (decisao === "devolver") {
+      if (!aprovador) return ResponseFactory.error("Só a chefia pode devolver uma solicitação.", 403);
+      const motivo = String(p.motivo || "").replace(/[\r\n]+/g, " ").trim().slice(0, 300);
+      if (!motivo) return ResponseFactory.error("Informe o motivo da devolução.", 400);
+      Object.assign(o, { status: "devolvido", decididoPor: quem, decididoEm: new Date().toISOString(), motivo: motivo });
+    } else if (decisao === "cancelar") {
+      if (o.solicitante !== quem && !aprovador) return ResponseFactory.error("Só quem pediu pode cancelar a solicitação.", 403);
+      Object.assign(o, { status: "cancelado", decididoPor: quem, decididoEm: new Date().toISOString(), motivo: String(p.motivo || "").slice(0, 300) });
+    } else return ResponseFactory.error("Decisão inválida.", 400);
+    AprovacoesEmail.gravar(o);
+    logger.info(quem, `Solicitação de e-mail ${o.id} ${o.status}.`);
+    return ResponseFactory.success({ message: "Solicitação atualizada.", aprovacao: AprovacoesEmail.publico(o) });
+  } finally { lock.releaseLock(); }
+}
+
+/**
+ * Envia o e-mail. Só a chefia (permissão "cob.aprovar") envia: diretamente ou aprovando
+ * uma solicitação da equipe (aprovacaoId). Os PDFs vêm prontos do navegador de quem aprova.
+ */
+function handleCobrancaEmail(auth, payload, logger) {
+  const p = Utils.isPlainObject(payload) ? payload : {};
+  const quem = auth.usuario || "API";
+  if (!auth.pode("cob.aprovar")) {
+    return ResponseFactory.error(auth.pode("cob.email") ? "Esta cobrança precisa ser aprovada pelo Chefe de Gabinete ou pelo Chefe de Unidade antes do envio. Use \"Enviar para aprovação\"." : "Seu perfil não pode enviar cobranças por e-mail.", 403);
+  }
+  const v = EmailCobranca.validar(p);
+  if (v.erro) return ResponseFactory.error(v.erro, 400);
+  const dados = v.dados;
+  const anexosIn = Array.isArray(p.anexos) ? p.anexos : [];
+  if (anexosIn.length > EmailCobranca.MAX_ANEXOS) return ResponseFactory.error(`No máximo ${EmailCobranca.MAX_ANEXOS} anexos por e-mail.`, 400);
+  let total = 0;
+  const anexos = [];
+  for (let i = 0; i < anexosIn.length; i++) {
+    const a = anexosIn[i] || {};
+    let bytes;
+    try { bytes = Utilities.base64Decode(String(a.base64 || "")); } catch (e) { return ResponseFactory.error("Anexo corrompido.", 400); }
+    if (bytes.length < 5 || String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]) !== "%PDF") return ResponseFactory.error("Os anexos precisam ser PDFs gerados pelo GABPro.", 400);
+    total += bytes.length;
+    if (total > EmailCobranca.MAX_BYTES) return ResponseFactory.error("Os anexos passam de 20 MB. Envie menos cobranças por vez.", 400);
+    const nome = (String(a.nome || `Cobranca_${i + 1}`).replace(/[^\w.\-]+/g, "_").replace(/\.pdf$/i, "").slice(0, 80) || `Cobranca_${i + 1}`) + ".pdf";
+    anexos.push(Utilities.newBlob(bytes, "application/pdf", nome));
+  }
+  const lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    let apr = null;
+    if (p.aprovacaoId) {
+      apr = AprovacoesEmail.ler().find(x => x.id === String(p.aprovacaoId));
+      if (!apr) return ResponseFactory.error("Solicitação não encontrada.", 404);
+      if (apr.status !== "pendente") return ResponseFactory.error(`Esta solicitação já foi ${apr.status === "aprovado" ? "aprovada" : apr.status === "devolvido" ? "devolvida" : "cancelada"} por ${apr.decididoPor}.`, 409);
+    }
+    let restante = null;
+    try { restante = MailApp.getRemainingDailyQuota(); } catch (e) {
+      return ResponseFactory.error("O Apps Script ainda não tem autorização para enviar e-mails. No editor do Apps Script, execute a função autorizarEmail, aceite a permissão e publique uma nova versão.", 403);
+    }
+    if (restante !== null && restante < dados.para.length + dados.cc.length) return ResponseFactory.error(`A cota diária de e-mails do Google acabou (restam ${restante} destinatário(s) hoje). Tente amanhã ou envie para menos pessoas.`, 429);
+    const enviadoEm = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "dd/MM/yyyy 'às' HH:mm");
+    const corpo = { mensagem: dados.mensagem, assinatura: dados.assinatura, enviadoEm: enviadoEm, aprovadoPor: quem, cobrancas: dados.cobrancas };
+    const opcoes = { to: dados.para.join(","), subject: dados.assunto, htmlBody: montarEmailCobranca(corpo), body: EmailCobranca.texto(corpo), name: "GABPro · Gabinete SEDUC-MT" };
+    if (dados.cc.length) opcoes.cc = dados.cc.join(",");
+    if (anexos.length) opcoes.attachments = anexos;
+    if (dados.responderPara) opcoes.replyTo = dados.responderPara;
+    try {
+      MailApp.sendEmail(opcoes);
+    } catch (e) {
+      logger.error(quem, `Falha ao enviar e-mail de cobrança: ${e.message}`);
+      const msg = String(e.message || "");
+      if (/autoriza|permission|permiss/i.test(msg)) return ResponseFactory.error("O Apps Script ainda não tem autorização para enviar e-mails. No editor do Apps Script, execute a função autorizarEmail, aceite a permissão e publique uma nova versão.", 403);
+      return ResponseFactory.error(`O Google recusou o envio: ${msg}`, 502);
+    }
+    if (apr) AprovacoesEmail.gravar(Object.assign(apr, dados, { status: "aprovado", decididoPor: quem, decididoEm: new Date().toISOString() }));
+    logger.info(quem, `E-mail de cobrança enviado para ${dados.para.join(", ")}${dados.cc.length ? ` (cópia: ${dados.cc.join(", ")})` : ""} · ${dados.cobrancas.map(c => c.codigo).join(", ")}${apr ? ` · aprovado (${apr.id}, pedido de ${apr.solicitante})` : ""}`);
+    let rest = null; try { rest = MailApp.getRemainingDailyQuota(); } catch (e) { /* ignora */ }
+    return ResponseFactory.success({ message: "E-mail enviado.", para: dados.para, cc: dados.cc, enviadoEm: enviadoEm, aprovadoPor: quem, cotaRestante: rest, aprovacao: apr ? AprovacoesEmail.publico(apr) : null });
+  } finally { lock.releaseLock(); }
+}
+/** Execute uma vez no editor do Apps Script para autorizar o envio de e-mails (v4.17). */
+function autorizarEmail() {
+  const n = MailApp.getRemainingDailyQuota();
+  return `Envio de e-mails autorizado. Cota de hoje: ${n} destinatário(s).`;
+}
+
 function handleDiagnostico(auth, logger) {
   const r = {
     versao: CONFIG.VERSION,
@@ -10420,7 +10839,9 @@ function handleDiagnostico(auth, logger) {
                 ['dados.porPessoa', 'Ver os números de cada pessoa', 'Gráfico por responsável e o "Meu Dia" de outra pessoa'],
                 ['rel.equipe', 'Relatório de desempenho da equipe', 'Modelo "Equipe" e a seção de desempenho nos relatórios PDF'],
                 ['rel.cobranca', 'Emitir cobranças às secretarias', 'Relatório de cobrança: 1ª, 2ª ou 3ª notificação'],
-                ['cob.responder', 'Registrar respostas de cobranças', 'Marcar o que a secretaria respondeu, encaminhar ao Gabinete e cancelar']
+                ['cob.responder', 'Registrar respostas de cobranças', 'Marcar o que a secretaria respondeu, encaminhar ao Gabinete e cancelar'],
+                ['cob.email', 'Pedir envio de cobranças por e-mail', 'Preparar o e-mail da cobrança (texto, destinatários e cópia) e enviar para aprovação'],
+                ['cob.aprovar', 'Aprovar e enviar cobranças por e-mail', 'Chefe de Gabinete ou de Unidade: revisa, aprova e envia, ou devolve os pedidos da equipe']
             ] },
             { id: 'gestao', titulo: 'Gestão do sistema', icone: 'fa-shield-halved', cor: '#e11d48', itens: [
                 ['metas.editar', 'Editar metas de prazo', 'Percentuais de cumprimento por prioridade'],
@@ -10429,7 +10850,7 @@ function handleDiagnostico(auth, logger) {
             ] }
         ];
         const PERM_CHAVES = PERM_GRUPOS.flatMap(g => g.itens.map(i => i[0]));
-        const PERM_EQUIPE = ['tela.dashboard', 'tela.mapa', 'tela.processos', 'tela.movimentacoes', 'tela.alertas', 'tela.cobrancas', 'tela.audiencias', 'tela.agenda', 'tela.relatorios', 'rel.cobranca', 'cob.responder',
+        const PERM_EQUIPE = ['tela.dashboard', 'tela.mapa', 'tela.processos', 'tela.movimentacoes', 'tela.alertas', 'tela.cobrancas', 'tela.audiencias', 'tela.agenda', 'tela.relatorios', 'rel.cobranca', 'cob.responder', 'cob.email',
             'proc.criar', 'proc.editar', 'proc.excluir', 'proc.lote', 'proc.dilacao', 'proc.exportar', 'aud.gerir'];
         const permMarcar = lista => Object.fromEntries(PERM_CHAVES.map(k => [k, lista.includes(k)]));
         const PERFIS_PADRAO = [
@@ -11521,8 +11942,8 @@ function handleDiagnostico(auth, logger) {
         // ===============================================
         // DIAGNÓSTICO DE CONEXÃO E GRAVAÇÃO
         // ===============================================
-        const FRONT_VERSION = '4.16.0';
-        const BACKEND_RECOMENDADO = '4.16.0';
+        const FRONT_VERSION = '4.18.0';
+        const BACKEND_RECOMENDADO = '4.18.0';
         let versaoBackend = '';
 
         function compararVersao(a, b) {
@@ -18611,7 +19032,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             ];
         }
         function relMontarCobranca(c, pr, codigo) {
-            const agora = new Date();
+            const agora = pr.emitidoEm || new Date();
             const quando = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
             const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const sec = catSecDe(pr.sec) || { sigla: pr.sec, nome: '' };
@@ -18621,7 +19042,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             let h = `<div class="rel-doc tc cob-doc" id="rel-doc" style="--nv:${N.cor};--nv-bg:${catMistura(N.cor, [255, 255, 255], .91)}">
                 <div class="rel-cab rel-avoid">
                     <div class="rel-marca">${relLogoSVG(44)}<div><div class="nome">GAB<span>Pro</span></div><div class="sub">Gestão de prazos e processos</div></div></div>
-                    <div class="rel-cab-dir">Emitido em <b>${quando}</b>, ${hora}<br>por <b>${escapeHTML(usuarioLogado || '—')}</b><br>Código <b>${codigo}</b></div>
+                    <div class="rel-cab-dir">Emitido em <b>${quando}</b>, ${hora}<br>por <b>${escapeHTML(pr.emitidoPor || usuarioLogado || '—')}</b><br>Código <b>${codigo}</b></div>
                 </div>
                 <div class="rel-faixa" style="background:linear-gradient(90deg, ${N.cor}, ${COB_NIVEIS[3].cor})"></div>
                 <div class="cob-nivel rel-avoid">
@@ -18631,7 +19052,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                 <div class="cob-dest rel-avoid">
                     <div><small>Destinatário</small><b>Secretaria Adjunta ${escapeHTML(sec.sigla)}${sec.nome ? ` · ${escapeHTML(sec.nome)}` : ''}</b></div>
                     <div><small>Assunto</small><b>${c.nivel === 3 ? 'Advertência por' : 'Cobrança de'} resposta a demandas pendentes</b></div>
-                    <div><small>Referência</small><b>${escapeHTML(codigo)} · ${fmtData(hojeISO())}</b></div>
+                    <div><small>Referência</small><b>${escapeHTML(codigo)} · ${fmtData(isoDeTs(agora.getTime()))}</b></div>
                 </div>
                 <div class="cob-texto rel-avoid"><p>Senhor(a) Secretário(a) Adjunto(a),</p>${cobTexto(c, sec).map(t => `<p>${t}</p>`).join('')}</div>
                 <div class="cob-prazo rel-avoid"><i class="fa-solid fa-hourglass-half"></i><div><small>Prazo para resposta</small><b>até ${fmtData(c.prazo)}</b><span>${c.dias} dia${c.dias === 1 ? '' : 's'} út${c.dias === 1 ? 'il' : 'eis'} a partir desta ${c.nivel === 3 ? 'advertência' : 'cobrança'}</span></div>
@@ -18664,7 +19085,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
         }
         function relCapaCobranca(c, pr, codigo, emitido) {
             const sec = catSecDe(pr.sec) || { sigla: pr.sec, nome: '' };
-            const inc = cobSo && cobSo.sec === pr.sec ? `Pendentes da ${cobSo.ref}` : { vencidos: 'Somente vencidas', criticos: 'Vencidas e próximos 7 dias', abertos: 'Todas em aberto' }[pr.cob.incluir];
+            const inc = pr.incluirRotulo ? pr.incluirRotulo : cobSo && cobSo.sec === pr.sec ? `Pendentes da ${cobSo.ref}` : { vencidos: 'Somente vencidas', criticos: 'Vencidas e próximos 7 dias', abertos: 'Todas em aberto' }[pr.cob.incluir];
             const filtros = [
                 ['fa-building-columns', 'Secretaria adjunta', sec.nome ? `${sec.sigla} · ${sec.nome}` : sec.sigla],
                 ['fa-layer-group', 'Nível da cobrança', `${c.N.rot} · ${c.N.nome}${pr.cob.nivel === 'auto' ? ' (definido pelo histórico)' : ''}`],
@@ -18675,7 +19096,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             ];
             return relCapaHTML({
                 tipo: `${c.N.rot} · ${c.N.nome}`, titulo: pr.titulo, subtitulo: `Secretaria Adjunta ${sec.sigla}${sec.nome ? ' · ' + sec.nome : ''}. ${c.nivel === 3 ? 'Advertência por demandas que continuam sem resposta.' : c.nivel === 2 ? 'Reiteração da cobrança de demandas pendentes.' : 'Notificação de demandas com prazo de resposta vencido.'}`,
-                emitido, por: usuarioLogado, codigo, filtros, rotuloFiltros: 'Dados da cobrança', rotuloResumo: 'Pendências',
+                emitido, por: pr.emitidoPor || usuarioLogado, codigo, filtros, rotuloFiltros: 'Dados da cobrança', rotuloResumo: 'Pendências',
                 kpis: [['Pendências', c.itens.length, '#0f172a'], ['Vencidas', c.vencidos.length, '#dc2626'], ['Maior atraso (dias)', c.maiorAtraso, '#ea580c'], ['Nível', c.N.rot.split(' ')[0], c.N.cor]],
                 carimbo: { titulo: c.N.rot.toUpperCase(), sub: c.N.nome + (c.nivel === 3 ? ' · último aviso' : ''), cor: c.N.claro }
             });
@@ -18827,7 +19248,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
         /** Lista de cobranças emitidas, com a situação de cada uma (mais recentes primeiro). */
         function cobColetar() {
             const porProc = new Map(processos.map(p => [str(p.id), p]));
-            const cobs = new Map(), resp = [], canc = new Map(), enc = new Map();
+            const cobs = new Map(), resp = [], canc = new Map(), enc = new Map(), envios = new Map(), pedidosMail = new Map();
             historicoGeral.forEach(h => {
                 const a = str(h.acao);
                 if (!a.startsWith('Cobrança') && !a.startsWith('Resposta à cobrança')) return;
@@ -18844,6 +19265,13 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                     if (!canc.has(m[1])) canc.set(m[1], { motivo: str(m[2]).trim(), usuario: str(h.usuario), ts: tsData(h.data) });
                 } else if ((m = RX_COB_ENC.exec(a))) {
                     if (!enc.has(m[1])) enc.set(m[1], { obs: str(m[2]).trim(), usuario: str(h.usuario), ts: tsData(h.data) });
+                } else if ((m = RX_COB_MAIL.exec(a))) {
+                    const k = m[1] + '|' + str(h.usuario) + '|' + m[2] + '|' + Math.round(tsData(h.data) / 120000);
+                    if (!envios.has(k)) envios.set(k, { cod: m[1], para: listaEmails(m[2]), cc: listaEmails(m[3] || ''), aprovadoPor: str(m[4]).trim(), usuario: str(h.usuario), ts: tsData(h.data) });
+                } else if ((m = RX_COB_MAIL_SOL.exec(a)) || (m = RX_COB_MAIL_DEV.exec(a))) {
+                    const sol = RX_COB_MAIL_SOL.test(a);
+                    const k = m[1] + '|' + (sol ? 's' : 'd') + '|' + str(h.usuario) + '|' + Math.round(tsData(h.data) / 120000);
+                    if (!pedidosMail.has(k)) pedidosMail.set(k, { cod: m[1], tipo: sol ? 'pedido' : 'devolvido', texto: str(m[2]).trim(), usuario: str(h.usuario), ts: tsData(h.data) });
                 }
             });
             resp.forEach(r => { const c = cobs.get(r.cod), it = c && c.itens.get(r.pid); if (it && (!it.resp || r.ts < it.resp.ts)) it.resp = r; });
@@ -18865,6 +19293,8 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                 const datas = c.lista.filter(i => i.resp).map(i => i.resp.data).sort();
                 c.ultimaResp = datas.length ? datas[datas.length - 1] : '';
                 c.anteriores = [];
+                c.envios = [...envios.values()].filter(e => e.cod === c.codigo).sort((a, b) => a.ts - b.ts);
+                c.pedidosMail = [...pedidosMail.values()].filter(e => e.cod === c.codigo).sort((a, b) => a.ts - b.ts);
             });
             // Reiteração: cobrança posterior, de nível maior, à mesma secretaria, com alguma pendência desta
             lista.forEach(c => {
@@ -18914,6 +19344,9 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             b.classList.toggle('hidden', !n); b.classList.toggle('inline-flex', !!n);
             const btn = document.getElementById('btn-tab-cobrancas');
             if (btn) btn.title = n ? `${cobPlural(n, 'cobrança vencida', 'cobranças vencidas')} sem resposta` : 'Notificações, reiterações e advertências';
+            const ba = document.getElementById('cob-badge-apr');
+            if (ba) { const k = pode('cob.aprovar') ? cobAprPendentes().length : 0; ba.innerHTML = k ? `<i class="fa-solid fa-user-check"></i>${k}` : ''; ba.classList.toggle('hidden', !k); ba.classList.toggle('inline-flex', !!k); }
+            cobAprCarregar();
         }
 
         function renderCobrancas() {
@@ -19005,17 +19438,25 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                 lista.innerHTML = `<div class="cob-vazio"><i class="fa-solid fa-envelope-open-text"></i><b>Nenhuma cobrança emitida ainda</b><p>As notificações às secretarias adjuntas são geradas em Relatórios PDF › Cobrança às secretarias. Depois de baixadas, elas aparecem aqui para acompanhar a resposta.</p>${pode('rel.cobranca') ? '<button type="button" class="cob-bt forte" style="--c:#dc2626" onclick="cobNova()"><i class="fa-solid fa-plus"></i>Emitir a primeira cobrança</button>' : ''}</div>`;
                 return;
             }
-            lista.innerHTML = filtradas.length ? `<div class="cob-tr th"><span>Nível</span><span>Cobrança</span><span>Secretaria</span><span>Prazo de resposta</span><span>Andamento</span><span>Situação</span></div>` + filtradas.map(c => {
+            const comSel = pode('cob.email') || pode('cob.aprovar');
+            [...cobSel].forEach(k => { const c = todas.find(x => x.codigo === k); if (!c || c.sit === 'cancelada') cobSel.delete(k); });
+            lista.classList.toggle('cob-lista-sel', comSel);
+            lista.innerHTML = filtradas.length ? `<div class="cob-tr th">${comSel ? `<label class="cob-ck" title="Selecionar todas"><input type="checkbox" id="cob-sel-todas" aria-label="Selecionar todas as cobranças da lista" onchange="cobSelecionarTodas(this.checked)"></label>` : ''}<span>Nível</span><span>Cobrança</span><span>Secretaria</span><span>Prazo de resposta</span><span>Andamento</span><span>Situação</span></div>` + filtradas.map(c => {
                 const sec = catSecDe(c.sec) || { sigla: c.sec, cor: '#64748b' };
-                return `<button type="button" class="cob-tr" onclick="cobAbrir(${jsArg(c.codigo)})">
+                const env = cobAprPendentes().some(x => x.codigos.includes(c.codigo)) ? ` · <span class="cob-env-tag apr"><i class="fa-solid fa-user-check"></i> e-mail aguardando aprovação</span>` : c.envios.length ? ` · <span class="cob-env-tag"><i class="fa-solid fa-paper-plane"></i> enviada por e-mail</span>` : '';
+                const podeSel = comSel && c.sit !== 'cancelada';
+                return `<${comSel ? `div role="button" tabindex="0" onkeydown="if (event.target === this && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); cobAbrir(${jsArg(c.codigo)}); }"` : 'button type="button"'} class="cob-tr${cobSel.has(c.codigo) ? ' sel' : ''}" onclick="cobAbrir(${jsArg(c.codigo)})">
+                    ${comSel ? `<label class="cob-ck" onclick="event.stopPropagation()">${podeSel ? `<input type="checkbox" data-cod="${escapeHTML(c.codigo)}" aria-label="Selecionar ${escapeHTML(c.codigo)}" ${cobSel.has(c.codigo) ? 'checked' : ''} onchange="cobSelecionar(this.dataset.cod, this.checked)">` : ''}</label>` : ''}
                     <span>${cobNivelTag(c.nivel)}</span>
-                    <span class="min-w-0"><b>${c.N.nome}</b><small>${escapeHTML(c.codigo)} · ${fmtData(c.emitido)} por ${escapeHTML(c.por || '—')}</small></span>
+                    <span class="min-w-0"><b>${c.N.nome}</b><small>${escapeHTML(c.codigo)} · ${fmtData(c.emitido)} por ${escapeHTML(c.por || '—')}${env}</small></span>
                     <span><span class="cob-sg" style="--s:${catCor(sec.cor, '#64748b')}">${escapeHTML(sec.sigla)}</span></span>
                     <span><b class="${c.sit === 'vencida' ? 'txt-venc' : ''}">${fmtData(c.prazo)}</b><small class="${c.sit === 'vencida' ? 'txt-venc' : ''}">${cobPrazoTexto(c)}</small></span>
                     <span>${cobBarra(c)}<small>${c.atendidos} de ${c.total} atendida(s)</small></span>
                     <span>${cobSitChip(c)}</span>
-                </button>`;
+                </${comSel ? 'div' : 'button'}>`;
             }).join('') : `<div class="cob-vazio pequeno"><i class="fa-solid fa-filter-circle-xmark"></i><b>Nenhuma cobrança com esses filtros</b><button type="button" class="cob-bt" onclick="cobLimparFiltros()">Limpar filtros</button></div>`;
+            cobSelBarra();
+            cobRenderAprovacoes();
             if (cobDetCodigo && document.getElementById('modal-cob') && !document.getElementById('modal-cob').classList.contains('hidden')) cobRenderDetalhe();
         }
         function cobFiltrarSit(f) { cobFiltro.sit = cobFiltro.sit === f && f !== 'abertas' ? 'todas' : f; renderCobrancas(); }
@@ -19077,6 +19518,10 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             c.lista.filter(i => i.resp).forEach(i => { const k = i.resp.data + '|' + i.resp.doc + '|' + i.resp.usuario; if (!grupos.has(k)) grupos.set(k, { r: i.resp, n: 0 }); grupos.get(k).n++; });
             grupos.forEach(({ r, n }) => ev.push({ ts: Date.parse(r.data + 'T12:00:00'), ic: 'fa-reply', cor: '#047857', t: `<b>Resposta recebida</b> · ${cobPlural(n, 'demanda', 'demandas')}`, s: `em ${fmtData(r.data)}${r.doc ? ` · ${escapeHTML(r.doc)}` : ''} · registrada por ${escapeHTML(r.usuario)}` }));
             if (c.reiteradaPor) ev.push({ ts: c.reiteradaPor.ts, ic: 'fa-share', cor: '#7c3aed', t: `<b>Reiterada</b> pela ${c.reiteradaPor.N.rot}`, s: escapeHTML(c.reiteradaPor.codigo) });
+            (c.pedidosMail || []).forEach(e => ev.push(e.tipo === 'pedido'
+                ? { ts: e.ts, ic: 'fa-user-check', cor: '#7c3aed', t: `<b>Envio por e-mail pedido</b> por ${escapeHTML(e.usuario)}`, s: `para ${escapeHTML(e.texto)} · aguardando a aprovação da chefia` }
+                : { ts: e.ts, ic: 'fa-reply', cor: '#dc2626', t: `<b>Pedido de e-mail devolvido</b> por ${escapeHTML(e.usuario)}`, s: escapeHTML(e.texto || 'sem motivo informado') }));
+            (c.envios || []).forEach(e => ev.push({ ts: e.ts, ic: 'fa-paper-plane', cor: '#1d4ed8', t: `<b>Enviada por e-mail</b> para ${escapeHTML(e.para.join(', '))}`, s: `${e.cc.length ? `cópia ${escapeHTML(e.cc.join(', '))} · ` : ''}${e.aprovadoPor ? `aprovado por ${escapeHTML(e.aprovadoPor)}` : `por ${escapeHTML(e.usuario)}`} em ${new Date(e.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` }));
             if (c.encaminhada) ev.push({ ts: c.encaminhada.ts, ic: 'fa-building-columns', cor: '#be123c', t: '<b>Encaminhada ao Gabinete do Secretário</b>', s: `por ${escapeHTML(c.encaminhada.usuario)}${c.encaminhada.obs ? ` · ${escapeHTML(c.encaminhada.obs)}` : ''}` });
             if (c.cancelada) ev.push({ ts: c.cancelada.ts, ic: 'fa-ban', cor: '#64748b', t: '<b>Cobrança cancelada</b>', s: `por ${escapeHTML(c.cancelada.usuario)}${c.cancelada.motivo ? ` · ${escapeHTML(c.cancelada.motivo)}` : ''}` });
             ev.sort((a, b) => a.ts - b.ts);
@@ -19087,6 +19532,9 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             if (cobPodeForm(c, 'resposta')) bts.push(`<button type="button" class="cob-bt forte${cobForm === 'resposta' ? ' on' : ''}" style="--c:#047857" onclick="cobMostrarForm('resposta')"><i class="fa-solid fa-reply"></i>Registrar resposta</button>`);
             if (c.aberta && c.nivel < 3 && pode('rel.cobranca') && c.pendentes.length) bts.push(`<button type="button" class="cob-bt forte" style="--c:${COB_NIVEIS[c.nivel + 1].cor}" onclick="cobEmitirProxima(${jsArg(c.codigo)})"><i class="fa-solid ${COB_NIVEIS[c.nivel + 1].ic}"></i>Emitir ${COB_PROXIMA[c.nivel]}</button>`);
             if (cobPodeForm(c, 'encaminhar')) bts.push(`<button type="button" class="cob-bt forte${cobForm === 'encaminhar' ? ' on' : ''}" style="--c:#be123c" onclick="cobMostrarForm('encaminhar')"><i class="fa-solid fa-building-columns"></i>Encaminhar ao Gabinete</button>`);
+            const pedidoPend = cobAprPendentes().find(x => x.codigos.includes(c.codigo));
+            if (pedidoPend && pode('cob.aprovar')) bts.push(`<button type="button" class="cob-bt forte" style="--c:#7c3aed" onclick="cmAbrirSolicitacao(${jsArg(pedidoPend.id)})"><i class="fa-solid fa-user-check"></i>Revisar pedido de e-mail</button>`);
+            else if ((pode('cob.email') || pode('cob.aprovar')) && c.sit !== 'cancelada' && !pedidoPend) bts.push(`<button type="button" class="cob-bt forte" style="--c:#1d4ed8" onclick="cmAbrir([${jsArg(c.codigo)}])"><i class="fa-solid ${pode('cob.aprovar') ? 'fa-paper-plane' : 'fa-user-check'}"></i>${pode('cob.aprovar') ? 'Enviar por e-mail' : 'Pedir envio por e-mail'}</button>`);
             if (cobPodeForm(c, 'cancelar')) bts.push(`<button type="button" class="cob-bt discreto${cobForm === 'cancelar' ? ' on' : ''}" onclick="cobMostrarForm('cancelar')"><i class="fa-solid fa-ban"></i>Cancelar cobrança</button>`);
 
             let form = '';
@@ -19120,6 +19568,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                 : c.sit === 'encaminhada' ? `<div class="cob-aviso" style="--c:#be123c"><i class="fa-solid fa-building-columns"></i><div>Caso encaminhado ao Gabinete do Secretário. Ainda é possível registrar a resposta da secretaria.</div></div>`
                 : c.sit === 'cancelada' ? `<div class="cob-aviso" style="--c:#64748b"><i class="fa-solid fa-ban"></i><div>Cobrança cancelada${c.cancelada.motivo ? `: ${escapeHTML(c.cancelada.motivo)}` : ''}.</div></div>` : '';
 
+            const pedidoAviso = pedidoPend ? `<div class="cob-aviso" style="--c:#7c3aed"><i class="fa-solid fa-user-check"></i><div><b>E-mail aguardando aprovação.</b> ${escapeHTML(pedidoPend.solicitante)} pediu o envio para ${escapeHTML(pedidoPend.para.join(', '))}.</div></div>` : '';
             box.innerHTML = `<div class="cob-det-cab" style="--c:${N.cor}">
                     ${cobNivelTag(c.nivel, true)}
                     <div class="min-w-0 flex-1"><h3 id="cob-det-titulo">${N.rot} · ${N.nome}</h3><p>Secretaria Adjunta ${escapeHTML(sec.sigla)}${sec.nome ? ` · ${escapeHTML(sec.nome)}` : ''} · <span class="cod">${escapeHTML(c.codigo)}</span></p></div>
@@ -19127,7 +19576,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                     <button type="button" onclick="toggleModal('modal-cob')" class="cob-x" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="cob-det-corpo">
-                    ${aviso}
+                    ${aviso}${pedidoAviso}
                     <div class="cob-fatos">${fatos.map(([r, v, s]) => `<div><small>${r}</small><b>${v}</b><span>${s}</span></div>`).join('')}</div>
                     ${cadeiaHTML}
                     ${bts.length ? `<div class="cob-det-bts">${bts.join('')}</div>` : ''}
@@ -19214,6 +19663,533 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             const ativo = cobSo && pr && pr.sec === cobSo.sec;
             el.classList.toggle('hidden', !ativo);
             if (ativo) el.innerHTML = `<i class="fa-solid fa-share"></i><span>Reiteração da <b>${escapeHTML(cobSo.ref)}</b>: só as ${cobPlural(cobSo.ids.size, 'pendência', 'pendências')} que continuam sem resposta.</span><button type="button" onclick="cobLimparRef()">Usar os filtros</button>`;
+        }
+
+
+        // ---------- Modelo do e-mail de cobrança (igual ao do Apps Script) ----------
+        /**
+         * E-mail de encaminhamento de cobrança (v4.17). A MESMA função existe no Apps Script (envio)
+         * e no GABPro.html (prévia), para o que se vê na prévia ser exatamente o que é enviado.
+         * d = { mensagem, assinatura, enviadoEm, aprovadoPor, cobrancas: [{ nivel, sec, secNome, codigo, prazo, pendencias }] }
+         */
+        function montarEmailCobranca(d) {
+          var NV = {
+            1: { rot: "1ª Cobrança", nome: "Notificação", cor: "#b45309", fundo: "#fef3c7" },
+            2: { rot: "2ª Cobrança", nome: "Notificação reiterada", cor: "#c2410c", fundo: "#ffedd5" },
+            3: { rot: "3ª Cobrança", nome: "Advertência", cor: "#b91c1c", fundo: "#fee2e2" }
+          };
+          var esc = function (v) { return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+          var F = "font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
+          var cobs = (d.cobrancas || []).slice(0, 20);
+          var maior = cobs.reduce(function (m, c) { return Math.max(m, Number(c.nivel) || 1); }, 1);
+          var M = NV[maior] || NV[1];
+          var unica = cobs.length === 1 ? cobs[0] : null;
+          var rotulo = unica ? (NV[unica.nivel] || NV[1]).rot + " · " + (NV[unica.nivel] || NV[1]).nome : cobs.length + " cobranças em anexo";
+          var titulo = maior === 3 ? "Advertência por demandas pendentes" : "Cobrança de demandas pendentes";
+          var paragrafos = String(d.mensagem || "").replace(/\r\n/g, "\n").split(/\n{2,}/).map(function (p) { return p.trim(); }).filter(Boolean)
+            .map(function (p) { return '<p style="margin:0 0 14px;' + F + 'font-size:14.5px;line-height:1.65;color:#1e293b">' + esc(p).replace(/\n/g, "<br>") + "</p>"; }).join("");
+          var linhas = cobs.map(function (c, i) {
+            var N = NV[c.nivel] || NV[1];
+            var n = Number(c.pendencias) || 0;
+            return '<tr>' +
+              '<td style="padding:12px 0 12px 14px;' + (i ? "border-top:1px solid #e8edf3;" : "") + 'width:44px;vertical-align:middle">' +
+                '<div style="width:38px;height:38px;line-height:38px;border-radius:19px;text-align:center;background:' + N.fundo + ';color:' + N.cor + ';' + F + 'font-size:13px;font-weight:800">' + esc(c.nivel) + 'ª</div></td>' +
+              '<td style="padding:12px 10px;' + (i ? "border-top:1px solid #e8edf3;" : "") + 'vertical-align:middle;' + F + '">' +
+                '<div style="font-size:13.5px;font-weight:700;color:#0f172a">' + esc(N.nome) + ' · Secretaria Adjunta ' + esc(c.sec) + '</div>' +
+                '<div style="font-size:12px;color:#64748b;margin-top:2px">' + (c.secNome ? esc(c.secNome) + " · " : "") + 'Código de verificação <span style="color:#0f172a;font-weight:600">' + esc(c.codigo) + '</span></div></td>' +
+              '<td align="right" style="padding:12px 14px 12px 6px;' + (i ? "border-top:1px solid #e8edf3;" : "") + 'vertical-align:middle;white-space:nowrap;' + F + '">' +
+                '<div style="font-size:11px;color:#64748b">Resposta até</div>' +
+                '<div style="font-size:14px;font-weight:800;color:' + N.cor + '">' + esc(c.prazo) + '</div>' +
+                '<div style="font-size:11px;color:#64748b">' + n + (n === 1 ? " demanda pendente" : " demandas pendentes") + '</div></td></tr>';
+          }).join("");
+          var assin = String(d.assinatura || "").replace(/\r\n/g, "\n").split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+          var assinHTML = assin.map(function (l, i) { return '<div style="' + F + (i === 0 ? "font-size:14.5px;font-weight:700;color:#0f172a" : "font-size:13px;color:#475569") + ';line-height:1.5">' + esc(l) + "</div>"; }).join("");
+          return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(titulo) + '</title></head>' +
+            '<body style="margin:0;padding:0;background:#eef2f7">' +
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eef2f7"><tr><td align="center" style="padding:28px 12px">' +
+            '<table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border:1px solid #dbe2ec;border-radius:14px;overflow:hidden">' +
+              // Cabeçalho
+              '<tr><td style="background:#0f1d3a;padding:20px 28px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>' +
+                '<td style="vertical-align:middle;' + F + '"><div style="font-size:23px;font-weight:800;letter-spacing:-.3px;color:#ffffff;line-height:1">GAB<span style="color:#60a5fa">Pro</span></div>' +
+                '<div style="font-size:11px;color:#94a3b8;margin-top:5px">Gestão de prazos e processos</div></td>' +
+                '<td align="right" style="vertical-align:middle;' + F + 'font-size:11px;line-height:1.5;color:#cbd5e1">Secretaria de Estado de Educação<br><span style="color:#ffffff;font-weight:700">SEDUC · Mato Grosso</span></td>' +
+              '</tr></table></td></tr>' +
+              '<tr><td style="height:4px;line-height:4px;font-size:0;background:' + M.cor + '">&nbsp;</td></tr>' +
+              // Título
+              '<tr><td style="padding:26px 28px 4px;' + F + '">' +
+                '<div style="display:inline-block;font-size:11.5px;font-weight:700;color:' + M.cor + ';background:' + M.fundo + ';border-radius:999px;padding:4px 11px">' + esc(rotulo) + '</div>' +
+                '<div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:12px;line-height:1.3">' + esc(titulo) + '</div>' +
+              '</td></tr>' +
+              // Texto
+              '<tr><td style="padding:16px 28px 4px">' + paragrafos + '</td></tr>' +
+              // Anexos
+              (linhas ? '<tr><td style="padding:6px 28px 6px"><div style="' + F + 'font-size:12px;font-weight:700;color:#475569;margin:0 0 8px">' + (cobs.length === 1 ? "Documento em anexo" : "Documentos em anexo") + '</div>' +
+                '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:12px;background:#fbfcfe">' + linhas + '</table></td></tr>' : '') +
+              // Assinatura
+              '<tr><td style="padding:22px 28px 26px"><div style="' + F + 'font-size:14.5px;color:#1e293b;margin-bottom:14px">Atenciosamente,</div>' +
+                '<table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr><td style="border-left:3px solid ' + M.cor + ';padding:2px 0 2px 12px">' + assinHTML + '</td></tr></table></td></tr>' +
+              // Rodapé
+              '<tr><td style="background:#f6f8fb;border-top:1px solid #e2e8f0;padding:16px 28px;' + F + 'font-size:11.5px;line-height:1.6;color:#64748b">' +
+                'Mensagem enviada pelo GABPro' + (d.enviadoEm ? " em " + esc(d.enviadoEm) : "") + '. ' +
+                (d.aprovadoPor ? 'Envio aprovado por ' + esc(d.aprovadoPor) + '. ' : '') +
+                'A autenticidade de cada documento anexo pode ser conferida pelo código de verificação impresso no PDF. ' +
+                'Ao responder, mantenha o código no assunto para facilitar o registro da resposta.' +
+              '</td></tr>' +
+            '</table></td></tr></table></body></html>';
+        }
+
+        // ---------- Encaminhar cobranças por e-mail (v4.17) com aprovação da chefia (v4.18) ----------
+        const RX_COB_MAIL = /^Cobrança (COB-[\w-]+) enviada por e-mail para (.+?)(?: · cópia (.+?))?(?: · aprovada por (.+))?$/;
+        const RX_COB_MAIL_SOL = /^Cobrança (COB-[\w-]+): envio por e-mail aguardando aprovação · para (.+)$/;
+        const RX_COB_MAIL_DEV = /^Cobrança (COB-[\w-]+): envio por e-mail devolvido(?: · (.*))?$/;
+        const BACKEND_EMAIL = '4.18.0';
+        let cobApr = { lista: [], aprovador: false, em: 0, carregando: null, vistos: null };
+        const RX_EMAIL_OK = /^[^\s@,;<>()"]+@[^\s@,;<>()"]+\.[^\s@,;<>()"]+$/;
+        const cobSel = new Set();
+        let cm = null; // estado do e-mail em edição
+        const lsLer = (k, pad) => { try { const v = localStorage.getItem(k); return v === null ? pad : v; } catch (e) { return pad; } };
+        const lsGravar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navegador sem armazenamento */ } };
+        const listaEmails = v => str(v).split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean);
+
+        function cobSelecionar(cod, on) {
+            if (on) cobSel.add(cod); else cobSel.delete(cod);
+            const ck = document.querySelector(`#cob-lista input[data-cod="${CSS.escape(cod)}"]`);
+            if (ck) { ck.checked = on; const tr = ck.closest('.cob-tr'); if (tr) tr.classList.toggle('sel', on); }
+            cobSelBarra();
+        }
+        function cobSelecionarTodas(on) {
+            document.querySelectorAll('#cob-lista input[data-cod]').forEach(i => cobSelecionar(i.dataset.cod, on));
+        }
+        function cobSelBarra() {
+            const bar = document.getElementById('cob-selbar'); if (!bar) return;
+            const vis = [...document.querySelectorAll('#cob-lista input[data-cod]')];
+            const todas = document.getElementById('cob-sel-todas');
+            if (todas) { const n = vis.filter(i => i.checked).length; todas.checked = !!vis.length && n === vis.length; todas.indeterminate = n > 0 && n < vis.length; }
+            const n = cobSel.size;
+            bar.classList.toggle('hidden', !n || !(pode('cob.email') || pode('cob.aprovar')));
+            if (!n) return;
+            const cs = cobUltima.filter(c => cobSel.has(c.codigo));
+            const secs = [...new Set(cs.map(c => c.sec))];
+            bar.innerHTML = `<span class="cob-selbar-n"><b>${n}</b> ${n === 1 ? 'cobrança selecionada' : 'cobranças selecionadas'}<small>${escapeHTML(secs.join(', '))}</small></span>
+                <button type="button" class="cob-bt discreto" onclick="cobSel.clear(); renderCobrancas()">Limpar seleção</button>
+                <button type="button" class="cob-bt forte" style="--c:#1d4ed8" onclick="cmAbrir([...cobSel])"><i class="fa-solid ${pode('cob.aprovar') ? 'fa-paper-plane' : 'fa-user-check'}"></i>${pode('cob.aprovar') ? 'Encaminhar por e-mail' : 'Pedir envio por e-mail'}</button>`;
+        }
+
+        /** E-mails já usados com cada secretaria (do histórico) — para sugerir e preencher. */
+        function cmAgenda() {
+            const porSec = new Map(), todos = new Set(), ccPorSec = new Map();
+            cobUltima.slice().sort((a, b) => a.ts - b.ts).forEach(c => (c.envios || []).forEach(e => {
+                porSec.set(c.sec, e.para); if (e.cc.length) ccPorSec.set(c.sec, e.cc);
+                e.para.concat(e.cc).forEach(x => todos.add(x));
+            }));
+            listaEmails(lsLer('gab_cob_cc', '')).forEach(x => todos.add(x));
+            listaEmails(lsLer('gab_cob_contatos', '')).forEach(x => todos.add(x));
+            return { porSec, ccPorSec, todos: [...todos].sort() };
+        }
+        function cmTextoPadrao(cs) {
+            const secs = [...new Set(cs.map(c => c.sec))];
+            const juntar = l => l.length > 1 ? l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1] : l[0];
+            const varias = secs.length > 1;
+            const sauda = varias ? 'Senhores(as) Secretários(as) Adjuntos(as),' : 'Senhor(a) Secretário(a) Adjunto(a),';
+            const fecho = 'Permanecemos à disposição para os esclarecimentos necessários.';
+            if (cs.length === 1) {
+                const c = cs[0], n = c.pendentes.length || c.total, pz = fmtData(c.prazo);
+                const dem = n === 1 ? '1 demanda' : `${n} demandas`, pl = n === 1 ? '' : 'm';
+                const corpo = c.nivel === 1 ? [
+                    `Encaminhamos, em anexo, a 1ª Cobrança (Notificação) referente a ${dem} encaminhada${n === 1 ? '' : 's'} a essa Secretaria Adjunta ${c.sec} que se encontra${pl} com prazo de resposta vencido, conforme os registros do GABPro.`,
+                    `Solicitamos o envio das informações ou da manifestação até ${pz}, a fim de permitir o cumprimento dos prazos assumidos junto aos órgãos demandantes.`
+                ] : c.nivel === 2 ? [
+                    `Reiteramos a cobrança anteriormente encaminhada e enviamos, em anexo, a 2ª Cobrança (Notificação reiterada), uma vez que ${dem} permanece${pl} sem resposta dessa Secretaria Adjunta ${c.sec}.`,
+                    `Solicitamos, com urgência, o envio das informações até ${pz}. A ausência de retorno poderá ensejar a emissão de advertência.`
+                ] : [
+                    `Encaminhamos, em anexo, a 3ª Cobrança, em caráter de advertência, tendo em vista que, apesar das cobranças anteriores, ${dem} continua${pl} pendente${n === 1 ? '' : 's'} de resposta por essa Secretaria Adjunta ${c.sec}.`,
+                    `O não atendimento até ${pz} será comunicado ao Gabinete do Secretário para as providências cabíveis.`
+                ];
+                return [sauda, ...corpo, fecho].join('\n\n');
+            }
+            return [sauda,
+                `Encaminhamos, em anexo, as cobranças relacionadas abaixo, referentes a demandas encaminhadas ${varias ? `às Secretarias Adjuntas ${juntar(secs)}` : `a essa Secretaria Adjunta ${secs[0]}`} que permanecem sem resposta, conforme os registros do GABPro.`,
+                'Solicitamos o envio das informações dentro dos prazos indicados em cada documento, a fim de permitir o cumprimento dos prazos assumidos junto aos órgãos demandantes.',
+                fecho].join('\n\n');
+        }
+        function cmAssuntoPadrao(cs) {
+            if (cs.length === 1) { const c = cs[0]; return `${c.N.rot} (${c.N.nome}) – Secretaria Adjunta ${c.sec} – ${c.codigo}`; }
+            const secs = [...new Set(cs.map(c => c.sec))];
+            const maior = Math.max(...cs.map(c => c.nivel));
+            return `${maior === 3 ? 'Advertência e cobranças' : 'Cobranças'} de demandas pendentes – ${secs.length > 1 ? 'Secretarias Adjuntas' : 'Secretaria Adjunta'} ${secs.join(', ')}`;
+        }
+
+        function cmAbrir(cods, sol) {
+            const aprovando = !!(sol && sol.status === 'pendente' && pode('cob.aprovar'));
+            if (!aprovando && !pode('cob.aprovar') && !exigir('cob.email', 'Seu perfil não pode enviar cobranças por e-mail.')) return;
+            const todas = cobColetar(); cobUltima = todas;
+            const cs = cods.map(k => todas.find(c => c.codigo === k)).filter(c => c && c.sit !== 'cancelada').sort((a, b) => b.nivel - a.nivel || a.sec.localeCompare(b.sec));
+            if (!cs.length) return showToast('Selecione ao menos uma cobrança (as canceladas não podem ser enviadas).', 'warning');
+            if (cs.length > 10) return showToast('Envie no máximo 10 cobranças por e-mail.', 'warning');
+            const ag = cmAgenda();
+            const para = [...new Set(cs.flatMap(c => ag.porSec.get(c.sec) || []))];
+            const ccSec = [...new Set(cs.flatMap(c => ag.ccPorSec.get(c.sec) || []))];
+            cm = {
+                cods: cs.map(c => c.codigo), para, cc: (ccSec.length ? ccSec : listaEmails(lsLer('gab_cob_cc', ''))).filter(x => !para.includes(x)),
+                assunto: cmAssuntoPadrao(cs), mensagem: cmTextoPadrao(cs), editado: false,
+                assinatura: lsLer('gab_cob_assin', `${usuarioLogado || ''}\nGabinete · Secretaria de Estado de Educação de Mato Grosso`),
+                responder: lsLer('gab_cob_responder', ''), marca: lsLer('gab_cob_marca', 'padrao'),
+                anexos: new Map(cs.map(c => [c.codigo, { incluir: true, st: 'fila' }])), aba: 'escrever', enviando: false, erro: '',
+                modo: aprovando ? 'aprovar' : pode('cob.aprovar') ? 'direto' : 'solicitar', sol: sol || null, devolvendo: false
+            };
+            if (sol) {
+                Object.assign(cm, { para: (sol.para || []).slice(), cc: (sol.cc || []).slice(), assunto: sol.assunto || cm.assunto, mensagem: sol.mensagem || cm.mensagem, assinatura: sol.assinatura || cm.assinatura, responder: sol.responderPara || '', marca: sol.marca || cm.marca, editado: true });
+                if (Array.isArray(sol.anexos) && sol.anexos.length) cm.anexos.forEach((a, k) => { a.incluir = sol.anexos.includes(k); });
+                if (!aprovando) cm.sol = null;
+            }
+            if (!MARCAS_DAGUA[cm.marca]) cm.marca = 'padrao';
+            const det = document.getElementById('modal-cob');
+            if (det && !det.classList.contains('hidden')) toggleModal('modal-cob');
+            cmRender();
+            const m = document.getElementById('modal-cobmail');
+            if (m.classList.contains('hidden')) toggleModal('modal-cobmail');
+            setTimeout(() => { const i = document.getElementById(cm.para.length ? 'cm-assunto' : 'cm-para-in'); if (i) i.focus(); }, 120);
+            if (cm.modo !== 'solicitar') cmGerarAnexos();
+        }
+        function cmCorrigir(id) {
+            const sol = cobApr.lista.find(x => x.id === id); if (!sol) return;
+            cobUltima = cobColetar();
+            cmAbrir(sol.codigos, sol);
+        }
+        function cmAbrirSolicitacao(id) {
+            const sol = cobApr.lista.find(x => x.id === id); if (!sol) return showToast('Solicitação não encontrada. Atualize a tela.', 'warning');
+            cobUltima = cobColetar();
+            cmAbrir(sol.codigos, sol);
+        }
+        const cmCobs = () => cm ? cm.cods.map(k => cobUltima.find(c => c.codigo === k)).filter(Boolean) : [];
+        function cmDadosEmail(enviadoEm) {
+            return {
+                mensagem: cm.mensagem, assinatura: cm.assinatura, enviadoEm, aprovadoPor: cm.modo === 'solicitar' ? '' : (usuarioLogado || ''),
+                cobrancas: cmCobs().map(c => { const s = catSecDe(c.sec); return { nivel: c.nivel, sec: c.sec, secNome: s && s.nome ? s.nome : '', codigo: c.codigo, prazo: fmtData(c.prazo), pendencias: c.pendentes.length || c.total }; })
+            };
+        }
+
+        // ---------- PDF de uma cobrança já emitida (o mesmo documento, com a data original) ----------
+        function cobDiasUteis(de, ate) {
+            const d = new Date(de + 'T12:00:00'), fim = new Date(ate + 'T12:00:00'); let n = 0;
+            while (d < fim) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; }
+            return Math.max(1, n);
+        }
+        function cobDocumento(c) {
+            const emitido = new Date(c.ts || Date.now());
+            const itens = c.lista.filter(i => i.p).map(i => ({ p: i.p, anteriores: cobrancasDe(i.p, c.sec).filter(a => tsData(a.data) < c.ts && a.n < c.nivel), proxima: c.nivel, atraso: Math.max(0, -(diasAte(getPrazoVigente(i.p)) ?? 0)) }));
+            const vencidos = itens.filter(i => relSituacao(i.p) === 'atrasado');
+            const ants = (c.anteriores || []).map(a => ({ n: a.nivel, data: new Date(a.ts).toISOString(), usuario: a.por }));
+            const dados = { lista: itens.map(i => i.p), itens, nivel: c.nivel, auto: c.nivel, N: c.N, dias: cobDiasUteis(c.emitido, c.prazo), prazo: c.prazo, anteriores: ants, vencidos,
+                maiorAtraso: vencidos.length ? Math.max(...vencidos.map(i => i.atraso)) : 0,
+                mediaAtraso: vencidos.length ? Math.round(vencidos.reduce((t, i) => t + i.atraso, 0) / vencidos.length) : 0 };
+            const pr = { sec: c.sec, titulo: c.nivel === 3 ? 'Advertência por demandas pendentes' : 'Cobrança de demandas pendentes', obs: '', resp: '', int: '', assinante: c.por, cargo: 'Chefia de Gabinete',
+                cob: { nivel: String(c.nivel), incluir: 'vencidos', dias: 0, registrar: false }, emitidoEm: emitido, emitidoPor: c.por, incluirRotulo: 'Demandas desta cobrança' };
+            const box = document.createElement('div'); box.innerHTML = relMontarCobranca(dados, pr, c.codigo);
+            const el = box.firstElementChild; el.id = 'rel-doc-email';
+            return { el, info: { codigo: c.codigo, titulo: pr.titulo, emitido, capa: relCapaCobranca(dados, pr, c.codigo, emitido), nomeArquivo: `Cobranca_${c.nivel}a_${c.sec}_${c.codigo}.pdf` } };
+        }
+        function cobPDFBase64(c, marca) {
+            return new Promise((res, rej) => {
+                const { el, info } = cobDocumento(c);
+                exportarDocPDF(el, Object.assign(info, { marca, silencioso: true, paraEnvio: (b64, nome) => res({ b64, nome }), aoErro: rej }));
+            });
+        }
+        let cmFilaAnexos = Promise.resolve();
+        function cmGerarAnexos(forcar) {
+            if (!cm) return cmFilaAnexos;
+            const alvo = cm; const marca = cm.marca;
+            cmCobs().forEach(c => { const a = alvo.anexos.get(c.codigo); if (forcar || a.st === 'erro' || a.marca !== marca) Object.assign(a, { st: 'fila', b64: '', marca }); });
+            cmRenderAnexos();
+            cmFilaAnexos = cmFilaAnexos.then(async () => {
+                for (const c of cmCobs()) {
+                    if (cm !== alvo || alvo.marca !== marca) return;
+                    const a = alvo.anexos.get(c.codigo);
+                    if (!a || a.st === 'ok') continue;
+                    a.st = 'gerando'; cmRenderAnexos();
+                    try { const r = await cobPDFBase64(c, marca); if (alvo.marca !== marca) return; Object.assign(a, { st: 'ok', b64: r.b64, nome: r.nome, kb: Math.round(r.b64.length * 0.75 / 1024) }); }
+                    catch (e) { console.warn(e); Object.assign(a, { st: 'erro' }); }
+                    cmRenderAnexos();
+                }
+            });
+            return cmFilaAnexos;
+        }
+
+        // ---------- Tela do e-mail ----------
+        function cmChips(campo) {
+            return cm[campo].map((e, i) => `<span class="cm-chip${RX_EMAIL_OK.test(e) ? '' : ' inval'}" title="${RX_EMAIL_OK.test(e) ? escapeHTML(e) : 'Endereço inválido'}">${escapeHTML(e)}<button type="button" aria-label="Remover ${escapeHTML(e)}" onclick="cmRemover('${campo}', ${i})"><i class="fa-solid fa-xmark"></i></button></span>`).join('');
+        }
+        function cmRender() {
+            const box = document.getElementById('cobmail-corpo'); if (!box || !cm) return;
+            const cs = cmCobs();
+            const velho = versaoBackend && compararVersao(versaoBackend, BACKEND_EMAIL) < 0;
+            const sol = cm.sol;
+            const quando = sol ? new Date(sol.criadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+            const avisoModo = cm.modo === 'aprovar' ? `<div class="cob-aviso" style="--c:#7c3aed"><i class="fa-solid fa-user-check"></i><div><b>Pedido de ${escapeHTML(sol.solicitante)}</b> em ${quando}. Revise destinatários, texto e anexos: você pode ajustar antes de aprovar. Ao aprovar, o e-mail é enviado na hora.</div></div>`
+                : cm.modo === 'solicitar' ? `<div class="cob-aviso" style="--c:#2563eb"><i class="fa-solid fa-user-shield"></i><div>Este e-mail só será enviado <b>depois da aprovação</b> do Chefe de Gabinete ou do Chefe de Unidade. Os PDFs são gerados no momento da aprovação.</div></div>` : '';
+            const devolver = cm.modo === 'aprovar' && cm.devolvendo ? `<div class="cob-form" style="--c:#dc2626" id="cm-devolver"><h4><i class="fa-solid fa-reply"></i>Devolver para ${escapeHTML(sol.solicitante)}</h4><p>O e-mail não será enviado. Explique o que precisa ser corrigido.</p>
+                <label class="cob-form-obs"><span>Motivo *</span><textarea id="cm-motivo" rows="2" maxlength="300" placeholder="Ex.: incluir a SAGE em cópia e ajustar o prazo citado no texto"></textarea></label>
+                <div class="cob-form-bts"><button type="button" class="cob-bt discreto" onclick="cm.devolvendo = false; cmRender()">Voltar</button><button type="button" class="cob-bt forte" style="--c:#dc2626" onclick="cmDevolver()"><i class="fa-solid fa-reply"></i>Confirmar devolução</button></div></div>` : '';
+            const rotEnviar = cm.modo === 'solicitar' ? '<i class="fa-solid fa-user-check"></i>Enviar para aprovação' : cm.modo === 'aprovar' ? '<i class="fa-solid fa-check"></i>Aprovar e enviar' : '<i class="fa-solid fa-paper-plane"></i>Enviar e-mail';
+            cm.rotEnviar = rotEnviar;
+            const ag = cmAgenda();
+            box.innerHTML = `
+                <div class="cm-cab">
+                    <span class="cm-ic"><i class="fa-solid fa-paper-plane"></i></span>
+                    <div class="min-w-0 flex-1"><h3 id="cobmail-titulo">${cm.modo === 'aprovar' ? 'Aprovar envio por e-mail' : cm.modo === 'solicitar' ? 'Pedir envio por e-mail' : 'Encaminhar por e-mail'}</h3><p>${cs.length === 1 ? `${escapeHTML(cs[0].N.rot)} · Secretaria Adjunta ${escapeHTML(cs[0].sec)}` : `${cs.length} cobranças · ${escapeHTML([...new Set(cs.map(c => c.sec))].join(', '))}`}</p></div>
+                    <div class="cm-abas" role="tablist"><button type="button" role="tab" data-a="escrever" onclick="cmAba('escrever')">Escrever</button><button type="button" role="tab" data-a="previa" onclick="cmAba('previa')">Prévia</button></div>
+                    <button type="button" onclick="cmFechar()" class="cob-x" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="cm-grade" data-aba="${cm.aba}">
+                    <div class="cm-form">
+                        ${velho ? `<div class="cob-aviso" style="--c:#b45309"><i class="fa-solid fa-triangle-exclamation"></i><div>O Apps Script está na versão ${escapeHTML(versaoBackend)}. Para enviar e-mails com aprovação, cole o código v4.18 no Apps Script e publique uma nova versão.</div></div>` : ''}
+                        ${avisoModo}${devolver}
+                        <div id="cm-erro" class="cob-aviso${cm.erro ? '' : ' hidden'}" style="--c:#dc2626" role="alert"><i class="fa-solid fa-circle-exclamation"></i><div>${escapeHTML(cm.erro)}</div></div>
+                        <div class="cm-campo"><label for="cm-para-in">Para</label>
+                            <div class="cm-chips" id="cm-para" onclick="document.getElementById('cm-para-in').focus()">${cmChips('para')}<input id="cm-para-in" type="email" list="cm-sugestoes" autocomplete="off" placeholder="${cm.para.length ? '' : 'email@secretaria.mt.gov.br'}" onkeydown="cmTecla(event, 'para')" onblur="cmAdicionar('para', this)" onpaste="setTimeout(() => cmAdicionar('para', this), 0)"></div></div>
+                        <div class="cm-campo"><label for="cm-cc-in">Cópia</label>
+                            <div class="cm-chips" id="cm-cc" onclick="document.getElementById('cm-cc-in').focus()">${cmChips('cc')}<input id="cm-cc-in" type="email" list="cm-sugestoes" autocomplete="off" placeholder="${cm.cc.length ? '' : 'Opcional'}" onkeydown="cmTecla(event, 'cc')" onblur="cmAdicionar('cc', this)" onpaste="setTimeout(() => cmAdicionar('cc', this), 0)"></div></div>
+                        <datalist id="cm-sugestoes">${ag.todos.map(e => `<option value="${escapeHTML(e)}">`).join('')}</datalist>
+                        <div class="cm-campo"><label for="cm-assunto">Assunto</label><input id="cm-assunto" type="text" maxlength="200" value="${escapeHTML(cm.assunto)}" oninput="cm.assunto = this.value; cmPrevia()"></div>
+                        <div class="cm-campo"><div class="cm-rot"><label for="cm-msg">Mensagem</label><button type="button" class="cm-link" onclick="cmRestaurarTexto()"><i class="fa-solid fa-rotate-left"></i>Texto padrão</button></div>
+                            <textarea id="cm-msg" rows="9" maxlength="8000" oninput="cm.mensagem = this.value; cm.editado = true; cmPrevia()">${escapeHTML(cm.mensagem)}</textarea>
+                            <small class="cm-ajuda">Deixe uma linha em branco entre os parágrafos. A relação das cobranças e a assinatura entram automaticamente.</small></div>
+                        <div class="cm-duas">
+                            <div class="cm-campo"><label for="cm-assin">Assinatura</label><textarea id="cm-assin" rows="3" maxlength="600" oninput="cm.assinatura = this.value; cmPrevia()">${escapeHTML(cm.assinatura)}</textarea></div>
+                            <div class="cm-campo"><label for="cm-resp">Respostas para <em>(opcional)</em></label><input id="cm-resp" type="email" list="cm-sugestoes" value="${escapeHTML(cm.responder)}" placeholder="gabinete@seduc.mt.gov.br" oninput="cm.responder = this.value.trim()">
+                                <small class="cm-ajuda">Quem responder ao e-mail escreverá para este endereço.</small></div>
+                        </div>
+                        <div class="cm-campo"><div class="cm-rot"><span class="cm-lbl">Anexos</span>
+                            <label class="cm-marca">Marca d'água <select id="cm-marca" onchange="cm.marca = this.value; lsGravar('gab_cob_marca', this.value); if (cm.modo !== 'solicitar') cmGerarAnexos()">${Object.entries(MARCAS_DAGUA).map(([k, v]) => `<option value="${k}"${k === cm.marca ? ' selected' : ''}>${escapeHTML(v.rotulo)}</option>`).join('')}</select></label></div>
+                            <div id="cm-anexos" class="cm-anexos"></div></div>
+                    </div>
+                    <div class="cm-previa">
+                        <div class="cm-env" id="cm-env"></div>
+                        <iframe id="cm-iframe" title="Prévia do e-mail" sandbox=""></iframe>
+                    </div>
+                </div>
+                <div class="cm-rodape">
+                    <span class="cm-nota"><i class="fa-solid fa-circle-info"></i>${cm.modo === 'solicitar' ? 'A chefia recebe o pedido na tela Cobranças. Você acompanha a decisão por lá.' : 'Enviado pela conta do Google que publicou o GABPro. O envio fica registrado no histórico de cada processo.'}</span>
+                    <button type="button" class="cob-bt discreto" onclick="cmFechar()">Cancelar</button>
+                    ${cm.modo === 'aprovar' && !cm.devolvendo ? `<button type="button" class="cob-bt" style="color:#dc2626" onclick="cm.devolvendo = true; cmRender(); setTimeout(() => { const t = document.getElementById('cm-motivo'); if (t) { t.scrollIntoView({ block: 'nearest' }); t.focus(); } }, 50)"${velho ? ' disabled' : ''}><i class="fa-solid fa-reply"></i>Devolver</button>` : ''}
+                    <button type="button" id="cm-enviar" class="cob-bt forte" style="--c:${cm.modo === 'aprovar' ? '#047857' : '#1d4ed8'}" onclick="cmEnviar()"${velho ? ' disabled' : ''}>${rotEnviar}</button>
+                </div>`;
+            box.querySelectorAll('.cm-abas button').forEach(b => { const on = b.dataset.a === cm.aba; b.classList.toggle('ativo', on); b.setAttribute('aria-selected', on); });
+            cmRenderAnexos(); cmPrevia(true);
+        }
+        function cmAba(a) { cm.aba = a; const g = document.querySelector('#cobmail-corpo .cm-grade'); if (g) g.dataset.aba = a; document.querySelectorAll('#cobmail-corpo .cm-abas button').forEach(b => { const on = b.dataset.a === a; b.classList.toggle('ativo', on); b.setAttribute('aria-selected', on); }); if (a === 'previa') cmPrevia(true); }
+        function cmRenderAnexos() {
+            const box = document.getElementById('cm-anexos'); if (!box || !cm) return;
+            box.innerHTML = cmCobs().map(c => {
+                const a = cm.anexos.get(c.codigo);
+                const st = cm.modo === 'solicitar' ? '<small>gerado na aprovação</small>' : a.st === 'ok' ? `<small>${a.kb} KB</small>` : a.st === 'erro' ? `<small class="err">Falhou · <button type="button" onclick="cmGerarAnexos()">tentar de novo</button></small>` : `<small><i class="fa-solid fa-circle-notch fa-spin"></i> ${a.st === 'gerando' ? 'gerando PDF…' : 'na fila'}</small>`;
+                return `<label class="cm-anexo${a.incluir ? '' : ' fora'}" style="--c:${c.N.cor}"><input type="checkbox" ${a.incluir ? 'checked' : ''} onchange="cmAnexoIncluir(${jsArg(c.codigo)}, this.checked)"><i class="fa-solid fa-file-pdf"></i><span class="min-w-0"><b>Cobranca_${c.nivel}a_${escapeHTML(c.sec)}_${escapeHTML(c.codigo)}.pdf</b>${st}</span></label>`;
+            }).join('');
+            const bt = document.getElementById('cm-enviar');
+            if (bt && !cm.enviando) bt.innerHTML = cm.modo !== 'solicitar' && [...cm.anexos.values()].some(a => a.incluir && a.st !== 'ok' && a.st !== 'erro') ? '<i class="fa-solid fa-circle-notch fa-spin"></i>Preparando anexos…' : cm.rotEnviar;
+        }
+        function cmAnexoIncluir(cod, on) { const a = cm.anexos.get(cod); if (a) a.incluir = on; cmRenderAnexos(); }
+        let cmPreviaTimer = null;
+        function cmPrevia(ja) {
+            clearTimeout(cmPreviaTimer);
+            const f = () => {
+                if (!cm) return;
+                const fr = document.getElementById('cm-iframe'), env = document.getElementById('cm-env');
+                if (env) env.innerHTML = `<div><span>Para</span><b>${cm.para.length ? escapeHTML(cm.para.join(', ')) : '<em>ninguém ainda</em>'}</b></div>${cm.cc.length ? `<div><span>Cópia</span><b>${escapeHTML(cm.cc.join(', '))}</b></div>` : ''}<div><span>Assunto</span><b>${escapeHTML(cm.assunto || '—')}</b></div>`;
+                if (fr) {
+                    const agora = new Date();
+                    fr.srcdoc = montarEmailCobranca(cmDadosEmail(`${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`));
+                }
+            };
+            if (ja) f(); else cmPreviaTimer = setTimeout(f, 180);
+        }
+        function cmTecla(ev, campo) {
+            const i = ev.target;
+            if (['Enter', ',', ';', ' ', 'Tab'].includes(ev.key) && i.value.trim()) { if (ev.key !== 'Tab') ev.preventDefault(); cmAdicionar(campo, i); return; }
+            if (ev.key === 'Backspace' && !i.value && cm[campo].length) { cm[campo].pop(); cmAtualizarChips(campo); }
+        }
+        function cmAdicionar(campo, input) {
+            const novos = listaEmails(input.value);
+            if (!novos.length) return;
+            novos.forEach(e => { if (!cm.para.includes(e) && !cm.cc.includes(e)) cm[campo].push(e); });
+            input.value = ''; cmAtualizarChips(campo);
+        }
+        function cmRemover(campo, i) { cm[campo].splice(i, 1); cmAtualizarChips(campo); const inp = document.getElementById(`cm-${campo}-in`); if (inp) inp.focus(); }
+        function cmAtualizarChips(campo) {
+            const box = document.getElementById('cm-' + campo); if (!box) return;
+            const inp = document.getElementById(`cm-${campo}-in`);
+            box.querySelectorAll('.cm-chip').forEach(x => x.remove());
+            inp.insertAdjacentHTML('beforebegin', cmChips(campo));
+            inp.placeholder = cm[campo].length ? '' : (campo === 'para' ? 'email@secretaria.mt.gov.br' : 'Opcional');
+            if (cm.erro) cmMostrarErro('');
+            cmPrevia();
+        }
+        function cmRestaurarTexto() {
+            cm.mensagem = cmTextoPadrao(cmCobs()); cm.editado = false;
+            const t = document.getElementById('cm-msg'); if (t) t.value = cm.mensagem;
+            cmPrevia();
+        }
+        function cmFechar() {
+            if (cm && cm.enviando) return;
+            const m = document.getElementById('modal-cobmail');
+            if (m && !m.classList.contains('hidden')) toggleModal('modal-cobmail');
+            cm = null;
+        }
+        function cmMostrarErro(msg) {
+            cm.erro = msg;
+            const el = document.getElementById('cm-erro');
+            if (el) { el.classList.toggle('hidden', !msg); el.querySelector('div').textContent = msg; if (msg) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+        }
+        async function cmEnviar() {
+            if (!cm || cm.enviando) return;
+            ['para', 'cc'].forEach(k => { const i = document.getElementById(`cm-${k}-in`); if (i && i.value.trim()) cmAdicionar(k, i); });
+            const invalidos = cm.para.concat(cm.cc).filter(e => !RX_EMAIL_OK.test(e));
+            if (!cm.para.length) { cmMostrarErro('Informe para qual e-mail a cobrança será enviada.'); document.getElementById('cm-para-in').focus(); return; }
+            if (invalidos.length) return cmMostrarErro(`Corrija o endereço inválido: ${invalidos.join(', ')}.`);
+            if (cm.responder && !RX_EMAIL_OK.test(cm.responder)) return cmMostrarErro('O endereço em "Respostas para" é inválido.');
+            if (!cm.assunto.trim()) return cmMostrarErro('Informe o assunto.');
+            if (!cm.mensagem.trim()) return cmMostrarErro('Escreva o texto do e-mail.');
+            if (!navigator.onLine) return cmMostrarErro('Sem conexão com a internet. O e-mail só pode ser enviado on-line.');
+            cm.enviando = true; cmMostrarErro('');
+            const bt = document.getElementById('cm-enviar'); bt.disabled = true; bt.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>' + (cm.modo === 'solicitar' ? 'Enviando para aprovação…' : 'Preparando anexos…');
+            const alvo = cm;
+            if (cm.modo === 'solicitar') return cmSolicitar(alvo, bt);
+            try {
+                await cmGerarAnexos();
+                if (cm !== alvo) return;
+                const falhos = cmCobs().filter(c => { const a = cm.anexos.get(c.codigo); return a.incluir && a.st !== 'ok'; });
+                if (falhos.length) throw new Error(`Não foi possível gerar o PDF de ${falhos.map(c => c.codigo).join(', ')}. Tente de novo ou desmarque o anexo.`);
+                bt.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>Enviando…';
+                const anexos = cmCobs().map(c => cm.anexos.get(c.codigo)).filter(a => a.incluir).map(a => ({ nome: a.nome, base64: a.b64 }));
+                const d = cmDadosEmail('');
+                const r = await postNuvem({ action: 'cobranca_email', token: apiToken, payload: { para: cm.para, cc: cm.cc, assunto: cm.assunto.trim(), mensagem: cm.mensagem.trim(), assinatura: cm.assinatura.trim(), responderPara: cm.responder, cobrancas: d.cobrancas, anexos, aprovacaoId: cm.sol ? cm.sol.id : '' } }, 180000);
+                if (Number(r.code) === 401) { cm.enviando = false; sessaoExpirada(); return; }
+                if (r.status !== 'success') throw new Error(r.message === 'Ação desconhecida.' ? 'O Apps Script ainda não tem a versão 4.18. Cole o código novo no Apps Script e publique uma nova versão.' : (r.message || 'O e-mail não foi enviado.'));
+                const para = r.para || cm.para, cc = r.cc || cm.cc, aprov = r.aprovadoPor || usuarioLogado;
+                cmCobs().forEach(c => c.lista.forEach(i => adicionarAoHistorico(i.p || { id: i.pid }, `Cobrança ${c.codigo} enviada por e-mail para ${para.join(', ')}${cc.length ? ` · cópia ${cc.join(', ')}` : ''} · aprovada por ${aprov}`, 'cobranca')));
+                if (cm.sol) cobApr.lista = cobApr.lista.map(x => x.id === cm.sol.id ? Object.assign({}, x, { status: 'aprovado', decididoPor: aprov, decididoEm: new Date().toISOString() }) : x);
+                lsGravar('gab_cob_cc', cc.join(', ')); lsGravar('gab_cob_assin', cm.assinatura); lsGravar('gab_cob_responder', cm.responder);
+                lsGravar('gab_cob_contatos', [...new Set(para.concat(cc, listaEmails(lsLer('gab_cob_contatos', ''))))].slice(0, 60).join(', '));
+                const n = cm.cods.length;
+                cm.enviando = false; cmFechar();
+                cobSel.clear();
+                showToast(`${alvo.modo === 'aprovar' ? 'Aprovado e enviado' : 'E-mail enviado'} para ${para.join(', ')}${n > 1 ? ` com ${n} cobranças` : ''}.${r.cotaRestante != null ? ` Cota de hoje: ${r.cotaRestante}.` : ''}`);
+                cobAprCarregar(true);
+                try { atualizarViews(); } catch (e) { console.warn(e); }
+                renderCobrancas();
+            } catch (e) {
+                if (cm === alvo) {
+                    cm.enviando = false; bt.disabled = false;
+                    cmMostrarErro(e && e.tipo ? (e.message + ' ' + (EXPLICACAO_ERRO[e.tipo] || '')).trim() : (e.message || 'O e-mail não foi enviado.'));
+                    cmRenderAnexos();
+                }
+            }
+        }
+
+        // ---------- Aprovação da chefia (v4.18) ----------
+        async function cmSolicitar(alvo, bt) {
+            try {
+                const d = cmDadosEmail('');
+                const anexos = cmCobs().filter(c => alvo.anexos.get(c.codigo).incluir).map(c => c.codigo);
+                const r = await postNuvem({ action: 'cobranca_email_solicitar', token: apiToken, payload: { para: alvo.para, cc: alvo.cc, assunto: alvo.assunto.trim(), mensagem: alvo.mensagem.trim(), assinatura: alvo.assinatura.trim(), responderPara: alvo.responder, cobrancas: d.cobrancas, marca: alvo.marca, anexos } }, 60000);
+                if (Number(r.code) === 401) { alvo.enviando = false; sessaoExpirada(); return; }
+                if (r.status !== 'success') throw new Error(r.message === 'Ação desconhecida.' ? 'O Apps Script ainda não tem a versão 4.18. Peça para atualizarem o Apps Script.' : (r.message || 'O pedido não foi registrado.'));
+                const para = r.aprovacao ? r.aprovacao.para : alvo.para;
+                cmCobs().forEach(c => c.lista.forEach(i => adicionarAoHistorico(i.p || { id: i.pid }, `Cobrança ${c.codigo}: envio por e-mail aguardando aprovação · para ${para.join(', ')}`, 'cobranca')));
+                lsGravar('gab_cob_assin', alvo.assinatura); lsGravar('gab_cob_responder', alvo.responder);
+                if (r.aprovacao) cobApr.lista = [r.aprovacao].concat(cobApr.lista.filter(x => x.id !== r.aprovacao.id));
+                alvo.enviando = false; cmFechar(); cobSel.clear();
+                showToast('Pedido enviado para aprovação da chefia. Acompanhe em Cobranças.');
+                try { atualizarViews(); } catch (e) { console.warn(e); }
+                renderCobrancas();
+            } catch (e) {
+                if (cm === alvo) { alvo.enviando = false; bt.disabled = false; bt.innerHTML = alvo.rotEnviar; cmMostrarErro(e && e.tipo ? (e.message + ' ' + (EXPLICACAO_ERRO[e.tipo] || '')).trim() : (e.message || 'O pedido não foi registrado.')); }
+            }
+        }
+        async function cobAprDecidir(id, decisao, motivo) {
+            const r = await postNuvem({ action: 'cobranca_email_decidir', token: apiToken, payload: { id, decisao, motivo: motivo || '' } }, 40000);
+            if (Number(r.code) === 401) { sessaoExpirada(); throw new Error('Sessão expirada.'); }
+            if (r.status !== 'success') throw new Error(r.message || 'Não foi possível atualizar a solicitação.');
+            cobApr.lista = cobApr.lista.map(x => x.id === id ? r.aprovacao : x);
+            return r.aprovacao;
+        }
+        async function cmDevolver() {
+            if (!cm || !cm.sol || cm.enviando) return;
+            const motivo = (document.getElementById('cm-motivo').value || '').replace(/\s+/g, ' ').trim();
+            if (!motivo) { cmMostrarErro('Informe o motivo da devolução.'); document.getElementById('cm-motivo').focus(); return; }
+            cm.enviando = true;
+            const sol = cm.sol;
+            try {
+                await cobAprDecidir(sol.id, 'devolver', motivo);
+                const cods = new Set(sol.codigos);
+                cobUltima.filter(c => cods.has(c.codigo)).forEach(c => c.lista.forEach(i => adicionarAoHistorico(i.p || { id: i.pid }, `Cobrança ${c.codigo}: envio por e-mail devolvido · ${motivo.replace(/·/g, '-')}`, 'cobranca')));
+                cm.enviando = false; cmFechar();
+                showToast(`Pedido devolvido para ${sol.solicitante}.`);
+                try { atualizarViews(); } catch (e) { console.warn(e); }
+                renderCobrancas();
+            } catch (e) { if (cm) { cm.enviando = false; cmMostrarErro(e.message); } }
+        }
+        async function cobAprCancelar(id) {
+            const sol = cobApr.lista.find(x => x.id === id); if (!sol) return;
+            try { await cobAprDecidir(id, 'cancelar', 'Cancelado por quem pediu'); showToast('Pedido de envio cancelado.'); renderCobrancas(); }
+            catch (e) { showToast(e.message, 'error'); }
+        }
+        /** Busca os pedidos de envio no Apps Script (a cada abertura da tela e periodicamente). */
+        function cobAprCarregar(forcar) {
+            if (!apiToken || !navigator.onLine || !(pode('cob.email') || pode('cob.aprovar'))) return Promise.resolve();
+            if (versaoBackend && compararVersao(versaoBackend, BACKEND_EMAIL) < 0) return Promise.resolve();
+            if (cobApr.carregando) return cobApr.carregando;
+            if (!forcar && Date.now() - cobApr.em < 25000) return Promise.resolve();
+            cobApr.carregando = postNuvem({ action: 'cobranca_email_listar', token: apiToken, payload: {} }, 30000).then(r => {
+                if (r.status !== 'success') return;
+                const antes = cobApr.vistos;
+                cobApr.lista = Array.isArray(r.aprovacoes) ? r.aprovacoes : [];
+                cobApr.aprovador = !!r.aprovador; cobApr.em = Date.now();
+                const agora = new Map(cobApr.lista.map(x => [x.id, x.status]));
+                if (antes) cobApr.lista.forEach(x => {
+                    if (x.solicitante !== usuarioLogado || antes.get(x.id) !== 'pendente' || x.status === 'pendente') return;
+                    if (x.status === 'aprovado') showToast(`${x.decididoPor} aprovou e enviou o e-mail da cobrança ${x.codigos.join(', ')}.`);
+                    if (x.status === 'devolvido') showToast(`${x.decididoPor} devolveu o pedido de e-mail (${x.codigos.join(', ')}): ${x.motivo}`, 'warning');
+                });
+                cobApr.vistos = agora;
+                cobAtualizarBadge();
+                if (document.getElementById('tab-cobrancas') && !document.getElementById('tab-cobrancas').classList.contains('hidden')) cobRenderAprovacoes();
+            }).catch(e => console.warn('Aprovações:', e && e.message)).finally(() => { cobApr.carregando = null; });
+            return cobApr.carregando;
+        }
+        setInterval(() => cobAprCarregar(), 90000);
+        function cobAprPendentes() { return cobApr.lista.filter(x => x.status === 'pendente'); }
+        function cobRenderAprovacoes() {
+            const box = document.getElementById('cob-aprov'); if (!box) return;
+            const aprovador = pode('cob.aprovar');
+            const pend = cobAprPendentes().filter(x => aprovador || x.solicitante === usuarioLogado);
+            const meus = aprovador ? [] : cobApr.lista.filter(x => x.solicitante === usuarioLogado && x.status !== 'pendente' && x.status !== 'cancelado').slice(0, 4);
+            const itens = pend.concat(meus);
+            box.classList.toggle('hidden', !itens.length);
+            if (!itens.length) { box.innerHTML = ''; return; }
+            const quando = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+            const cobsDe = x => x.codigos.map(k => cobUltima.find(c => c.codigo === k)).filter(Boolean);
+            box.innerHTML = `<div class="cob-bloco-cab"><h3><i class="fa-solid fa-user-check" style="color:#7c3aed"></i>${aprovador ? 'Aguardando sua aprovação' : 'Seus pedidos de envio por e-mail'}</h3><span>${aprovador ? `${cobPlural(pend.length, 'e-mail pedido', 'e-mails pedidos')} pela equipe` : 'O e-mail só sai depois que a chefia aprovar'}</span></div>
+                <div class="apr-lista">${itens.map(x => {
+                    const cs = cobsDe(x), maior = cs.length ? Math.max(...cs.map(c => c.nivel)) : 1;
+                    const tit = cs.length === 1 ? `${cs[0].N.rot} · ${escapeHTML(cs[0].sec)}` : `${x.codigos.length} cobranças · ${escapeHTML([...new Set(cs.map(c => c.sec))].join(', '))}`;
+                    const st = x.status === 'pendente' ? `<span class="cob-sit" style="--c:#7c3aed;--b:#f5f3ff"><i class="fa-solid fa-hourglass-half"></i>Aguardando aprovação</span>`
+                        : x.status === 'aprovado' ? `<span class="cob-sit" style="--c:#047857;--b:#ecfdf5"><i class="fa-solid fa-circle-check"></i>Aprovado por ${escapeHTML(x.decididoPor)}</span>`
+                        : `<span class="cob-sit" style="--c:#dc2626;--b:#fef2f2"><i class="fa-solid fa-reply"></i>Devolvido por ${escapeHTML(x.decididoPor)}</span>`;
+                    const bts = aprovador ? `<button type="button" class="cob-bt forte" style="--c:#047857" onclick="cmAbrirSolicitacao(${jsArg(x.id)})"><i class="fa-solid fa-magnifying-glass"></i>Revisar e aprovar</button>`
+                        : x.status === 'pendente' ? `<button type="button" class="cob-bt discreto" onclick="cobAprCancelar(${jsArg(x.id)})">Cancelar pedido</button>`
+                        : x.status === 'devolvido' ? `<button type="button" class="cob-bt forte" style="--c:#1d4ed8" onclick="cmCorrigir(${jsArg(x.id)})"><i class="fa-solid fa-pen"></i>Corrigir e pedir de novo</button>` : '';
+                    return `<div class="apr-item" style="--c:${COB_NIVEIS[maior].cor}">
+                        <span class="apr-av" aria-hidden="true">${escapeHTML(str(x.solicitante).trim().charAt(0).toUpperCase() || '?')}</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="apr-l1"><b>${aprovador ? `${escapeHTML(x.solicitante)} pediu o envio` : tit}</b>${st}</div>
+                            <small>${aprovador ? `${tit} · ` : ''}para ${escapeHTML(x.para.join(', '))}${x.cc.length ? ` · cópia ${escapeHTML(x.cc.join(', '))}` : ''} · ${quando(x.criadoEm)}</small>
+                            <small class="apr-ass">“${escapeHTML(x.assunto)}”</small>
+                            ${x.status === 'devolvido' && x.motivo ? `<small class="apr-mot"><i class="fa-regular fa-comment"></i>${escapeHTML(x.motivo)}</small>` : ''}
+                        </div>
+                        <div class="apr-bts">${bts}</div>
+                    </div>`;
+                }).join('')}</div>`;
         }
 
         function relMontarDoc(lista, pr, e, codigo) {
@@ -19504,7 +20480,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                 return window.print();
             }
             const emitido = info.emitido.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const nomeArq = `GABPro_${info.titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 40)}_${hojeISO()}.pdf`;
+            const nomeArq = info.nomeArquivo || `GABPro_${info.titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 40)}_${hojeISO()}.pdf`;
             // Cópia fora da tela, em tamanho real, só para o PDF
             const MARG = [15, 10, 14, 10];
             const palco = document.createElement('div');
@@ -19518,9 +20494,11 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
             const areaW = 210 - MARG[1] - MARG[3], areaH = 297 - MARG[0] - MARG[2];
             const pageH = Math.floor(areaH * largInt / areaW);
             relPaginar(el, pageH);
-            showLoading("Gerando PDF...", "Montando capa, páginas, gráficos e selo.");
+            if (!info.silencioso) showLoading("Gerando PDF...", "Montando capa, páginas, gráficos e selo.");
             const finalizar = (ok, err) => {
-                palco.remove(); hideLoading();
+                palco.remove(); if (!info.silencioso) hideLoading();
+                if (!ok && info.aoErro) { console.error("Erro ao gerar PDF:", err); return info.aoErro(err || new Error('Falha ao gerar o PDF.')); }
+                if (ok && info.paraEnvio) return;
                 if (ok) { showToast("PDF baixado!"); if (info.aoConcluir) try { info.aoConcluir(); } catch (e) { console.warn(e); } }
                 else { console.error("Erro ao gerar PDF:", err); showToast("Erro ao gerar o PDF. Tente imprimir e salvar como PDF.", "error"); }
             };
@@ -19583,6 +20561,7 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                     pdf.setFont('helvetica', 'bold'); pdf.setTextColor(15, 23, 42);
                     pdf.text(`Página ${i} de ${n}`, W - 10, H - 5.6, { align: 'right' });
                 }
+                if (info.paraEnvio) { const b64 = pdf.output('datauristring').split(',')[1]; finalizar(true); info.paraEnvio(b64, nomeArq); return; }
                 pdf.save(nomeArq);
                 finalizar(true);
             }).catch(err => finalizar(false, err));
