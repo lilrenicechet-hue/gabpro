@@ -1,8 +1,8 @@
 /* GABPro — service worker (opcional). Coloque este arquivo na MESMA pasta do GABPro.html no site.
    Guarda uma cópia do sistema e das bibliotecas para abrir mais rápido e mesmo com internet instável.
    Os dados (Apps Script / planilha) nunca são guardados aqui: sempre vêm da nuvem. */
-const CACHE = 'gabpro-4.18.0';
-const ESSENCIAIS = ['./', './index.html'];
+const CACHE = 'gabpro-4.19.0';
+const ESSENCIAIS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(ESSENCIAIS.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));

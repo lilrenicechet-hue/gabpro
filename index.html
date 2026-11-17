@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <!-- Console GABPro ativo e pronto para edições -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>GABPro - Gerenciamento de Processos Jurídicos</title>
-    <!-- Aplicativo instalável (PWA): o manifesto e os ícones são gerados ao abrir a página -->
+    <!-- Aplicativo instalável (PWA): manifest.webmanifest e a pasta icons/ ficam junto do index.html.
+         Sem esses arquivos no site, o manifesto e os ícones são gerados ao abrir a página. -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <meta name="theme-color" content="#0f172a">
     <script>try { if (localStorage.getItem('gab_tema') === 'escuro') { document.documentElement.classList.add('escuro'); document.querySelector('meta[name="theme-color"]').content = '#0b1120'; } } catch (e) { /* sem armazenamento: modo claro */ }</script>
     <meta name="application-name" content="GABPro">
@@ -2115,6 +2118,43 @@
         html.escuro .apr-item small.apr-ass { color: #cbd5e1; }
         html.escuro .apr-av { background: rgba(124, 58, 237, .25); color: #ddd6fe; }
         html.escuro .cob-env-tag.apr { color: #c4b5fd; }
+        /* ===== v4.19: aplicativo de celular ===== */
+        #app-nav { display: none; }
+        #toast.opacity-0 { pointer-events: none; }
+        #app-convite { display: none; }
+        @media (max-width: 767px) {
+            html, body { overscroll-behavior-y: none; }
+            body { -webkit-tap-highlight-color: transparent; }
+            .app-topo { height: calc(4rem + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+            #sidebar { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+            body.app-nav-on > main { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+            body.app-nav-on #toast { bottom: calc(74px + env(safe-area-inset-bottom)); left: 12px; right: 12px; }
+            body.app-nav-on .att-card { bottom: calc(74px + env(safe-area-inset-bottom)); }
+            #app-nav:not(.hidden) { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; height: calc(62px + env(safe-area-inset-bottom)); padding: 0 4px env(safe-area-inset-bottom); background: rgba(255, 255, 255, .96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid #e2e8f0; box-shadow: 0 -6px 20px -12px rgba(15, 23, 42, .25); user-select: none; -webkit-user-select: none; }
+            body.app-teclado #app-nav { display: none !important; }
+            body.app-teclado > main { padding-bottom: 0; }
+            #app-nav button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #64748b; font-size: 10.5px; font-weight: 600; }
+            #app-nav .ic { position: relative; width: 52px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 17px; transition: background .2s, color .2s; }
+            #app-nav .ic b { position: absolute; top: -3px; right: 6px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+            #app-nav button.ativo { color: #1d4ed8; }
+            #app-nav button.ativo .ic { background: #dbeafe; }
+            #app-nav button:active .ic { transform: scale(.94); }
+            #app-nav button:focus-visible { outline: none; }
+            #app-nav button:focus-visible .ic { box-shadow: 0 0 0 2px #2563eb; }
+            #app-convite:not(.hidden) { display: flex; position: fixed; left: 12px; right: 12px; bottom: calc(74px + env(safe-area-inset-bottom)); z-index: 46; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 16px; background: #0f1d3a; color: #e2e8f0; box-shadow: 0 18px 40px -16px rgba(15, 23, 42, .7); animation: appSobe .4s cubic-bezier(.2, 1.2, .4, 1); }
+            #app-convite .lg { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #3b82f6, #1e3a8a); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+            #app-convite b { display: block; font-size: 13.5px; color: #fff; }
+            #app-convite small { display: block; font-size: 11.5px; color: #94a3b8; line-height: 1.35; }
+            #app-convite .bt { height: 34px; padding: 0 13px; border-radius: 10px; background: #3b82f6; color: #fff; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
+            #app-convite .x { width: 30px; height: 30px; border-radius: 9px; color: #94a3b8; flex-shrink: 0; }
+            @keyframes appSobe { from { opacity: 0; transform: translateY(16px); } }
+            html.escuro #app-nav:not(.hidden) { background: rgba(17, 26, 44, .96); border-color: #24304a; }
+            html.escuro #app-nav button { color: #94a3b8; }
+            html.escuro #app-nav button.ativo { color: #93c5fd; }
+            html.escuro #app-nav button.ativo .ic { background: rgba(59, 130, 246, .18); }
+            html.escuro #app-nav .ic b { border-color: #111a2c; }
+        }
+        @media (prefers-reduced-motion: reduce) { #app-convite { animation: none !important; } #app-nav .ic { transition: none; } }
     </style>
     <style id="tema-escuro">
 /* Tema escuro: gerado por build/gera_escuro.js a partir das classes usadas (não editar à mão) */
@@ -3557,7 +3597,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
 </head>
 <body class="text-brand-dark h-screen flex overflow-hidden">
     <!-- Novidades de cada versão (mostradas no aviso de atualização) -->
-    <script type="application/json" id="gab-novidades">{"4.18.0": ["Envio de cobranças por e-mail com aprovação do Chefe de Gabinete ou de Unidade", "A chefia revisa, ajusta, aprova e envia, ou devolve com o motivo", "A equipe acompanha seus pedidos na tela Cobranças"], "4.17.0": ["Encaminhar cobranças por e-mail: escolha os destinatários, quem vai em cópia e escreva o texto", "E-mail formal com a identidade do GABPro e o PDF da cobrança anexado", "Selecione várias cobranças na lista e envie de uma vez"], "4.16.0": ["Nova tela Cobranças: notificações, reiterações e advertências em um só lugar", "Registro da resposta de cada secretaria, com prazo, documento e tempo de resposta", "Próxima cobrança montada só com o que continua pendente; advertência vencida vai ao Gabinete"], "4.15.0": ["Marca d'água nos relatórios em PDF: GABPro, Confidencial, Rascunho ou Cópia controlada"], "4.14.1": ["A equipe também pode emitir o relatório de cobrança às secretarias"], "4.14.0": ["Relatório de cobrança às secretarias adjuntas: 1ª notificação, 2ª reiteração e 3ª advertência", "Cobranças registradas no histórico de cada processo"], "4.13.0": ["Aviso de atualização disponível, com o que mudou em cada versão", "Atualizar com um clique, sem perder alterações pendentes"], "4.12.0": ["Capa nos relatórios e na ata em PDF, com filtros aplicados e selo de autenticidade"], "4.11.0": ["Ajustes de permissão por usuário na Administração", "Equipe gera relatórios PDF (sem o desempenho da equipe)"], "4.10.0": ["Perfis de acesso personalizados e permissões por perfil"], "4.9.1": ["Histórico do processo dentro da tela de edição"], "4.9.0": ["Secretaria GS – Gabinete do Secretário", "Modo claro e escuro", "Área de Administração e Usuários aprimorados"]}</script>
+    <script type="application/json" id="gab-novidades">{"4.19.0": ["Aplicativo de celular: barra de navegação inferior, tela cheia e ícone próprio", "Número de avisos no ícone do aplicativo", "Atalhos no ícone: Meu Dia, Prazos, Cobranças e Novo processo"], "4.18.0": ["Envio de cobranças por e-mail com aprovação do Chefe de Gabinete ou de Unidade", "A chefia revisa, ajusta, aprova e envia, ou devolve com o motivo", "A equipe acompanha seus pedidos na tela Cobranças"], "4.17.0": ["Encaminhar cobranças por e-mail: escolha os destinatários, quem vai em cópia e escreva o texto", "E-mail formal com a identidade do GABPro e o PDF da cobrança anexado", "Selecione várias cobranças na lista e envie de uma vez"], "4.16.0": ["Nova tela Cobranças: notificações, reiterações e advertências em um só lugar", "Registro da resposta de cada secretaria, com prazo, documento e tempo de resposta", "Próxima cobrança montada só com o que continua pendente; advertência vencida vai ao Gabinete"], "4.15.0": ["Marca d'água nos relatórios em PDF: GABPro, Confidencial, Rascunho ou Cópia controlada"], "4.14.1": ["A equipe também pode emitir o relatório de cobrança às secretarias"], "4.14.0": ["Relatório de cobrança às secretarias adjuntas: 1ª notificação, 2ª reiteração e 3ª advertência", "Cobranças registradas no histórico de cada processo"], "4.13.0": ["Aviso de atualização disponível, com o que mudou em cada versão", "Atualizar com um clique, sem perder alterações pendentes"], "4.12.0": ["Capa nos relatórios e na ata em PDF, com filtros aplicados e selo de autenticidade"], "4.11.0": ["Ajustes de permissão por usuário na Administração", "Equipe gera relatórios PDF (sem o desempenho da equipe)"], "4.10.0": ["Perfis de acesso personalizados e permissões por perfil"], "4.9.1": ["Histórico do processo dentro da tela de edição"], "4.9.0": ["Secretaria GS – Gabinete do Secretário", "Modo claro e escuro", "Área de Administração e Usuários aprimorados"]}</script>
 
     <!-- Tela de Login Split-Screen Full-Width (Sem aspecto de pop-up) -->
     <div id="login-screen" class="fixed inset-0 z-[100] flex flex-col md:flex-row bg-brand-dark transition-opacity duration-500 overflow-hidden">
@@ -3804,7 +3844,7 @@ html.escuro #cob-badge:not(.tc,.tc *){background:#dc2626;color:#fff}
 
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 relative min-w-0">
         
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:hidden z-30 shadow-sm flex-shrink-0 relative">
+        <header class="app-topo h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:hidden z-30 shadow-sm flex-shrink-0 relative">
             <div class="flex items-center gap-3">
                 <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-blue-600 transition-colors p-1" title="Menu">
                     <i class="fa-solid fa-bars text-xl"></i>
@@ -10507,6 +10547,13 @@ function handleDiagnostico(auth, logger) {
     <div id="rt-topo" class="fixed top-3 left-1/2 -translate-x-1/2 z-[195] w-[420px] max-w-[calc(100vw-24px)] pointer-events-none"></div>
     <div id="rt-feed" class="fixed right-3 sm:right-5 bottom-20 sm:bottom-20 z-[45] flex flex-col gap-2 w-[340px] max-w-[calc(100vw-24px)] pointer-events-none"></div>
 
+    <nav id="app-nav" class="hidden" aria-label="Navegação principal"></nav>
+    <div id="app-convite" class="hidden" role="dialog" aria-label="Instalar o GABPro">
+        <span class="lg"><i class="fa-solid fa-scale-balanced"></i></span>
+        <div class="min-w-0 flex-1"><b>Use o GABPro como aplicativo</b><small>Ícone na tela inicial, tela cheia e abre mais rápido.</small></div>
+        <button type="button" class="bt" onclick="appDispensarConvite(true)">Instalar</button>
+        <button type="button" class="x" onclick="appDispensarConvite(false)" aria-label="Agora não"><i class="fa-solid fa-xmark"></i></button>
+    </div>
     <div id="toast" class="fixed bottom-5 right-5 transform transition-transform duration-300 translate-y-20 opacity-0 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl flex items-center space-x-3 z-[200] border border-gray-700">
         <i id="toast-icon" class="fa-solid fa-check-circle text-green-400"></i>
         <span id="toast-message" class="font-bold text-sm">Operação realizada!</span>
@@ -11942,7 +11989,7 @@ function handleDiagnostico(auth, logger) {
         // ===============================================
         // DIAGNÓSTICO DE CONEXÃO E GRAVAÇÃO
         // ===============================================
-        const FRONT_VERSION = '4.18.0';
+        const FRONT_VERSION = '4.19.0';
         const BACKEND_RECOMENDADO = '4.18.0';
         let versaoBackend = '';
 
@@ -12774,6 +12821,7 @@ function handleDiagnostico(auth, logger) {
             atualizarDashboard(); 
             renderTabelaAudiencias();
             if (location.hash && location.hash.length > 1) abrirAtalhoInicial(); else switchTab('meudia');
+            setTimeout(appConvidar, 4000);
             hideLoading();
             carregarConfigGab();
             carregarReunioes();
@@ -12861,6 +12909,7 @@ function handleDiagnostico(auth, logger) {
                 el.classList.toggle('bg-red-600', temAtraso);
                 el.classList.toggle('bg-orange-500', !temAtraso);
             });
+            try { appDefinirSelo(n); } catch (e) { /* ignora */ }
             ['btn-sino', 'btn-sino-m'].forEach(id => {
                 const b = document.getElementById(id);
                 if (b) b.title = n ? `${n} aviso(s): prazos críticos e audiências próximas` : 'Nenhum aviso pendente';
@@ -17732,12 +17781,14 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
         function ehStandalone() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
         async function configurarPWA() {
             pwaInstalado = ehStandalone();
+            let estatico = false;
+            if (/^https?:$/.test(location.protocol)) { try { const rm = await fetch('manifest.webmanifest', { cache: 'no-store' }); estatico = rm.ok && /json|manifest/.test(rm.headers.get('content-type') || 'json'); } catch (e) { /* sem o arquivo: gera na página */ } }
             try {
                 const [i192, i512, i180, m512, i32] = await Promise.all([pwaIcone(192), pwaIcone(512), pwaIcone(180), pwaIcone(512, true), pwaIcone(32)]);
                 const addLink = (rel, href, extra) => { if (!href) return; let l = document.querySelector(`link[rel="${rel}"]`); if (!l) { l = document.createElement('link'); l.rel = rel; document.head.appendChild(l); } Object.assign(l, extra || {}); l.href = href; };
                 addLink('icon', i32, { type: 'image/png' });
-                addLink('apple-touch-icon', i180);
-                if (/^https?:$/.test(location.protocol) && i192) {
+                if (!estatico) addLink('apple-touch-icon', i180);
+                if (/^https?:$/.test(location.protocol) && i192 && !estatico) {
                     const base = location.href.split('#')[0].split('?')[0];
                     const manifesto = {
                         name: 'GABPro · Gestão de Prazos e Processos', short_name: 'GABPro', description: 'Prazos, processos e audiências do gabinete.',
@@ -20191,6 +20242,54 @@ adicionarAoHistorico(p, `Status Lote -> ${acao}`); destacarProcesso(p.id);
                     </div>`;
                 }).join('')}</div>`;
         }
+
+
+        // ---------- Aplicativo de celular (v4.19): barra inferior, selo no ícone, convite para instalar ----------
+        const APP_NAV = [
+            ['meudia', 'fa-house', 'Início'], ['processos', 'fa-folder-open', 'Processos'], ['alertas', 'fa-bell', 'Prazos'],
+            ['cobrancas', 'fa-envelope-open-text', 'Cobranças'], ['calendario', 'fa-calendar-days', 'Agenda'], ['dashboard', 'fa-chart-pie', 'Painel']
+        ];
+        let appAvisos = 0;
+        function appAbaAtual() { const s = [...document.querySelectorAll('main section[id^="tab-"]')].find(x => !x.classList.contains('hidden')); return s ? s.id.slice(4) : ''; }
+        function appNavRender() {
+            const nav = document.getElementById('app-nav'); if (!nav) return;
+            const on = !!usuarioLogado;
+            document.body.classList.toggle('app-nav-on', on);
+            nav.classList.toggle('hidden', !on);
+            if (!on) return;
+            const itens = APP_NAV.filter(([t]) => podeAba(t)).slice(0, 4);
+            const atual = appAbaAtual();
+            const venc = (() => { try { return pode('tela.cobrancas') ? cobColetar().filter(c => c.sit === 'vencida').length : 0; } catch (e) { return 0; } })();
+            const selo = { alertas: appAvisos, cobrancas: venc };
+            nav.innerHTML = itens.map(([t, ic, rot]) => `<button type="button" data-t="${t}" class="${t === atual ? 'ativo' : ''}" ${t === atual ? 'aria-current="page"' : ''} onclick="switchTab('${t}')"><span class="ic"><i class="fa-solid ${ic}"></i>${selo[t] ? `<b>${selo[t] > 99 ? '99+' : selo[t]}</b>` : ''}</span><span>${rot}</span></button>`).join('')
+                + `<button type="button" data-t="mais" onclick="toggleMobileMenu()" aria-label="Mais opções"><span class="ic"><i class="fa-solid fa-bars"></i></span><span>Mais</span></button>`;
+        }
+        // A troca de tela também atualiza a barra inferior
+        const switchTabOriginal = switchTab;
+        switchTab = function (t) { const r = switchTabOriginal.apply(this, arguments); try { appNavRender(); } catch (e) { /* ignora */ } return r; };
+        /** Número no ícone do aplicativo instalado (Android/Windows/macOS que suportam). */
+        function appDefinirSelo(n) {
+            appAvisos = n || 0;
+            try { if ('setAppBadge' in navigator) { if (appAvisos) navigator.setAppBadge(appAvisos).catch(() => {}); else navigator.clearAppBadge().catch(() => {}); } } catch (e) { /* sem suporte */ }
+            appNavRender();
+        }
+        // Teclado aberto no celular: esconde a barra para não cobrir o campo
+        document.addEventListener('focusin', e => { if (window.innerWidth < 768 && e.target.matches('input:not([type=checkbox]):not([type=radio]), textarea, select, [contenteditable]')) document.body.classList.add('app-teclado'); });
+        document.addEventListener('focusout', () => setTimeout(() => { const a = document.activeElement; if (!a || !a.matches('input, textarea, select, [contenteditable]')) document.body.classList.remove('app-teclado'); }, 60));
+        // Convite para instalar (celular, no navegador, uma vez a cada 14 dias)
+        function appConvidar() {
+            const box = document.getElementById('app-convite'); if (!box) return;
+            const celular = window.innerWidth < 768 && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            let dispensado = 0; try { dispensado = +localStorage.getItem('gab_app_convite') || 0; } catch (e) { /* ignora */ }
+            if (!usuarioLogado || ehStandalone() || !celular || !/^https:$/.test(location.protocol) || Date.now() - dispensado < 14 * 864e5) return;
+            box.classList.remove('hidden');
+        }
+        function appDispensarConvite(instalar) {
+            const box = document.getElementById('app-convite'); if (box) box.classList.add('hidden');
+            try { localStorage.setItem('gab_app_convite', String(Date.now())); } catch (e) { /* ignora */ }
+            if (instalar) instalarApp();
+        }
+        if (ehStandalone()) document.documentElement.classList.add('app-standalone');
 
         function relMontarDoc(lista, pr, e, codigo) {
             const agora = new Date();

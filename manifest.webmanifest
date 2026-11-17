@@ -1,0 +1,122 @@
+{
+  "id": "./",
+  "name": "GABPro · Gestão de Prazos e Processos",
+  "short_name": "GABPro",
+  "description": "Prazos, processos, cobranças e audiências do gabinete da SEDUC-MT.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./?origem=app",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": [
+    "productivity",
+    "business"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Meu Dia",
+      "short_name": "Meu Dia",
+      "url": "./?origem=atalho#meudia",
+      "icons": [
+        {
+          "src": "icons/atalho-meudia.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Prazos críticos",
+      "short_name": "Prazos",
+      "url": "./?origem=atalho#alertas",
+      "icons": [
+        {
+          "src": "icons/atalho-prazos.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Cobranças",
+      "short_name": "Cobranças",
+      "url": "./?origem=atalho#cobrancas",
+      "icons": [
+        {
+          "src": "icons/atalho-cobrancas.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Novo processo",
+      "short_name": "Novo",
+      "url": "./?origem=atalho#novo",
+      "icons": [
+        {
+          "src": "icons/atalho-novo.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/celular-inicio.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Meu Dia no celular"
+    },
+    {
+      "src": "screenshots/celular-cobrancas.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Cobranças às secretarias"
+    },
+    {
+      "src": "screenshots/computador-cobrancas.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Acompanhamento de cobranças no computador"
+    }
+  ]
+}
